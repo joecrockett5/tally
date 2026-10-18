@@ -32,6 +32,7 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
         {
             e.Property(f => f.Name).HasMaxLength(300);
             e.Property(f => f.Brand).HasMaxLength(200);
+            e.Property(f => f.RestaurantName).HasMaxLength(100);
             e.Property(f => f.Barcode).HasMaxLength(32);
             e.Property(f => f.ExternalId).HasMaxLength(32);
             e.Property(f => f.PortionName).HasMaxLength(100);
@@ -43,7 +44,7 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
             e.HasOne(f => f.Restaurant).WithMany().HasForeignKey(f => f.RestaurantId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(f => f.Servings).WithOne().HasForeignKey(s => s.FoodId).OnDelete(DeleteBehavior.Cascade);
 
-            e.HasGeneratedTsVectorColumn(f => f.SearchVector, "english", f => new { f.Name, f.Brand })
+            e.HasGeneratedTsVectorColumn(f => f.SearchVector, "english", f => new { f.Name, f.Brand, f.RestaurantName })
                 .HasIndex(f => f.SearchVector).HasMethod("GIN");
             e.HasIndex(f => f.Name).HasMethod("GIN").HasOperators("gin_trgm_ops");
             e.HasIndex(f => new { f.Source, f.ExternalId }).IsUnique().HasFilter("\"ExternalId\" IS NOT NULL");

@@ -915,3 +915,66 @@ ul {
 .menu-list button:hover {
   background: var(--surface-2);
 }
+
+/* ---- Foods ------------------------------------------------------------- */
+.wrap {
+  flex-wrap: wrap;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.button-row > * {
+  flex: 1 1 140px;
+}
+.danger-link {
+  color: var(--bad);
+  align-self: flex-start;
+}
+.nutrient-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.serving-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.serving-amount {
+  width: 110px;
+  flex-shrink: 0;
+}
+a.food-row {
+  color: inherit;
+  text-decoration: none;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.preview-table th,
+.preview-table td {
+  text-align: left;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.preview-table .num {
+  text-align: right;
+}
+.row-error td {
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+}
+.row-warn td {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+code {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}

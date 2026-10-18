@@ -206,12 +206,16 @@ namespace Tally.Api.Data.Migrations
                     b.Property<Guid?>("RestaurantId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("RestaurantName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<NpgsqlTsVector>("SearchVector")
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("tsvector")
                         .HasAnnotation("Npgsql:TsVectorConfig", "english")
-                        .HasAnnotation("Npgsql:TsVectorProperties", new[] { "Name", "Brand" });
+                        .HasAnnotation("Npgsql:TsVectorProperties", new[] { "Name", "Brand", "RestaurantName" });
 
                     b.Property<string>("Source")
                         .IsRequired()

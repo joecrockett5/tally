@@ -28,7 +28,7 @@ public sealed class FoodSearch(TallyDbContext db)
                 f.Barcode,
                 Fts = f.SearchVector.Matches(EF.Functions.ToTsQuery("english", tsQuery)),
                 Rank = f.SearchVector.Rank(EF.Functions.ToTsQuery("english", tsQuery)),
-                Sim = EF.Functions.TrigramsWordSimilarity(text, f.Name + " " + (f.Brand ?? "")),
+                Sim = EF.Functions.TrigramsWordSimilarity(text, f.Name + " " + (f.Brand ?? "") + " " + (f.RestaurantName ?? "")),
                 Boost = f.Source == FoodSource.Custom
                     ? (f.OwnerProfileId == profileId && f.RestaurantId == null ? 0.6 : 0.5)
                     : f.Source == FoodSource.Cofid ? 0.4

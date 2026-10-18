@@ -31,7 +31,7 @@ services:
     environment:
       ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
       TZ: ${TALLY_TIMEZONE:-Europe/London}
-      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable"
       Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
       Tally__OpenFoodFacts__Enabled: ${OFF_ENABLED:-true}
       Tally__OpenFoodFacts__ContactEmail: ${OFF_CONTACT_EMAIL:-}

@@ -70,3 +70,11 @@ export function daysBetween(from: string, to: string): string[] {
 export function formatMonth(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(toUtcDate(iso));
 }
+
+/** A sensible default meal for "now". */
+export function mealForHour(hour: number): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
+  if (hour >= 5 && hour < 11) return 'Breakfast';
+  if (hour >= 11 && hour < 15) return 'Lunch';
+  if (hour >= 17 && hour < 22) return 'Dinner';
+  return 'Snacks';
+}

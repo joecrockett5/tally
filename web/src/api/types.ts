@@ -123,3 +123,41 @@ export interface BarcodeLookup {
   food: Food | null;
   message: string | null;
 }
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  itemCount: number;
+}
+
+export interface FoodInput {
+  name: string;
+  brand: string | null;
+  restaurant: string | null;
+  barcode: string | null;
+  basis: Basis;
+  portionName: string | null;
+  nutrients: Nutrients;
+  servings: { name: string; amount: number }[];
+  isShared: boolean;
+}
+
+export interface ImportRow {
+  row: number;
+  food: FoodInput | null;
+  errors: string[];
+  duplicate: string | null;
+}
+
+export interface ImportPreview {
+  rows: ImportRow[];
+  valid: number;
+  invalid: number;
+  duplicates: number;
+}
+
+export interface ImportResult {
+  created: number;
+  skippedDuplicates: number;
+  skippedInvalid: number;
+}

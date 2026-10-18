@@ -10,8 +10,10 @@
 
 - **Phase 4 — Diary:** DiaryEntry with nutrition snapshot (per-basis values + quantity; edits never consult the live food); log by g/ml, serving × n or portions; move/edit/delete; copy meal from yesterday or a chosen date; day view with per-meal subtotals and totals flagged when they include unknowns; recent/frequent quick picks with last-used amount. Frontend: diary day view with date navigation (DD/MM/YYYY, "Today" in the server timezone), add-food page with debounced local + online search merged and de-duplicated by barcode, source badges, OFF attribution, log sheet with live nutrition preview, entry edit sheet, barcode scanner (BarcodeDetector → ZXing fallback, rear camera, torch, manual entry, HTTPS explanation, stream stopped on read/close), "not found → Add this product" prefill link.
 
+- **Phase 5 — Custom foods and restaurants:** create/edit/soft-delete custom foods (per 100 g, per 100 ml or portion-only; servings; optional brand, restaurant, barcode), private by default with "Share with everyone"; only the creator can edit/unshare/delete (403 otherwise); "Copy to my foods" for any visible food; restaurants list and per-restaurant items; restaurant names are part of the search vector. CSV/JSON bulk import with stateless preview (per-row validation, duplicate detection by restaurant + name or barcode, within-file repeats), commit of valid rows, private/shared chosen at import; schema in `docs/IMPORT.md`, examples in `examples/`. Frontend: Foods page (mine/shared/restaurants), food detail, food form (blank = unknown, sodium → salt), restaurant page, import page with preview table. Custom foods with a barcode win barcode lookups.
+
 ## Next
-- Phase 5 — Custom foods and restaurants (manual entry, sharing, copy-to-mine, CSV/JSON import).
+- Phase 6 — Recipes and saved meals.
 
 ## Known issues
 - None yet.

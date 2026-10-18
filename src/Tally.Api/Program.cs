@@ -5,6 +5,8 @@ using Tally.Api.Data;
 using System.Text.Json.Serialization;
 using Tally.Api.Features.Diary;
 using Tally.Api.Features.Foods;
+using Tally.Api.Features.Import;
+using Tally.Api.Features.Restaurants;
 using Tally.Api.Features.Profiles;
 using Tally.Api.OpenFoodFacts;
 using Tally.Api.Infrastructure;
@@ -25,6 +27,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<CofidImporter>();
 builder.Services.AddScoped<FoodSearch>();
 builder.Services.AddScoped<DiaryService>();
+builder.Services.AddScoped<FoodImport>();
 builder.Services.AddSingleton<Clock>();
 builder.Services.AddScoped<OffFoodService>();
 builder.Services.AddSingleton<OffRateGate>();
@@ -34,6 +37,8 @@ builder.Services.AddHttpClient<OffClient>((sp, http) =>
     http.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TallyOptions>>().Value.OpenFoodFacts.TimeoutSeconds));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddProblemDetails();
+// Imports can be a few hundred KB of CSV/JSON.
+builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 5 * 1024 * 1024);
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     // TLS terminates at Nginx Proxy Manager on a private network; trust it.
@@ -76,6 +81,9 @@ scoped.MapGet("/me", async (ProfileContext profile, TallyDbContext db) =>
     await db.Profiles.Where(p => p.Id == profile.Id).Select(p => new ProfileDto(p.Id, p.Name, p.Avatar, p.Colour)).FirstAsync());
 scoped.MapDiaryEndpoints();
 scoped.MapFoodEndpoints();
+scoped.MapCustomFoodEndpoints();
+scoped.MapRestaurantEndpoints();
+scoped.MapImportEndpoints();
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());
 

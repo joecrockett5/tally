@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Overnight oats",
+    "basis": "per_100g",
+    "energy_kcal": 165,
+    "fat": 4.1,
+    "saturates": 0.9,
+    "carbohydrate": 24,
+    "sugars": 8.5,
+    "fibre": 3.1,
+    "protein": 6.8,
+    "salt": 0.08,
+    "servings": [{ "name": "1 jar", "amount": 250 }]
+  },
+  {
+    "name": "Steak Bake",
+    "restaurant": "Greggs",
+    "basis": "per_portion",
+    "portion_name": "1 bake",
+    "energy_kcal": 408,
+    "fat": 24,
+    "saturates": 12,
+    "carbohydrate": 34,
+    "sugars": 1.4,
+    "fibre": 1.7,
+    "protein": 13,
+    "sodium": 0.52
+  }
+]

@@ -35,6 +35,8 @@ public sealed class Food
     public string? Brand { get; set; }
     public Guid? RestaurantId { get; set; }
     public Restaurant? Restaurant { get; set; }
+    /// <summary>Copy of the restaurant's name so it can be part of the search vector.</summary>
+    public string? RestaurantName { get; set; }
     public string? Barcode { get; set; }
 
     /// <summary>CoFID food code or OFF product code.</summary>
