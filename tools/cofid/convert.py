@@ -31,13 +31,14 @@ def num(raw):
         return None
 
 
-def by_code(rows):
+def by_code_and_name(rows):
+    """Keyed by (code, name): CoFID 2021 reuses code 13-669 for two different foods."""
     header = rows[0]
     out = {}
     for row in rows[FIRST_DATA_ROW:]:
         if not row or not row[0].strip():
             continue
-        out[row[0].strip()] = {h.strip(): (row[i] if i < len(row) else "") for i, h in enumerate(header)}
+        out[(row[0].strip(), row[1].strip())] = {h.strip(): (row[i] if i < len(row) else "") for i, h in enumerate(header)}
     return out
 
 
@@ -49,7 +50,8 @@ def fmt(v):
 
 def main(src, dest):
     prox_rows = read_sheet(src, "1.3 Proximates")
-    inorg = by_code(read_sheet(src, "1.4 Inorganics"))
+    inorg = by_code_and_name(read_sheet(src, "1.4 Inorganics"))
+    seen = set()
     header = [h.strip() for h in prox_rows[0]]
     col = {h: i for i, h in enumerate(header)}
 
@@ -67,14 +69,23 @@ def main(src, dest):
             if not row or not row[0].strip():
                 continue
             code = row[0].strip()
+            name = get(row, "Food Name").strip()
+            inorganics = inorg.get((code, name), {})
+            # Keep codes unique; a reused code gets a suffix.
+            unique_code = code
+            n = 2
+            while unique_code in seen:
+                unique_code = f"{code}-{n}"
+                n += 1
+            seen.add(unique_code)
             aoac = num(get(row, "AOAC fibre (g)"))
             nsp = num(get(row, "NSP (g)"))
             fibre, method = (aoac, "AOAC") if aoac is not None else ((nsp, "NSP") if nsp is not None else (None, ""))
-            sodium_mg = num(inorg.get(code, {}).get("Sodium (mg)", ""))
+            sodium_mg = num(inorganics.get("Sodium (mg)", ""))
             salt = None if sodium_mg is None else sodium_mg / 1000 * 2.5
             w.writerow([
-                code,
-                get(row, "Food Name").strip(),
+                unique_code,
+                name,
                 get(row, "Description").strip(),
                 get(row, "Group").strip(),
                 fmt(num(get(row, "Energy (kcal) (kcal)"))),

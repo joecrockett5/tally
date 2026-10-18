@@ -43,6 +43,7 @@ One line of reasoning each. Grouped by area.
 ## CoFID
 
 - Source: *McCance and Widdowson's Composition of Foods Integrated Dataset 2021* (OGL v3), sheets 1.3 Proximates and 1.4 Inorganics, converted by `tools/cofid/convert.py` to `data/cofid/cofid-2021.csv` (2,887 foods). The xlsx itself is not committed.
+- CoFID 2021 reuses code `13-669` for two foods (roasted aubergine and raw watercress); the converter joins sheets on (code, name) and gives the second one code `13-669-2`.
 - CoFID "Tr" (trace) → 0, "N" (not measured) and blanks → null.
 - **Fibre uses AOAC fibre** (the UK labelling method) **and falls back to NSP** (Englyst) when AOAC is absent; the method is kept in the CSV. NSP reads lower than AOAC — documented, accepted for generic foods.
 - Salt = sodium (mg) ÷ 1000 × 2.5. CoFID carbohydrate is "available carbohydrate" (excludes fibre), matching UK labels.
@@ -52,7 +53,7 @@ One line of reasoning each. Grouped by area.
 
 - Checked the OFF docs (Oct 2026): **product lookup uses API v3** (`/api/v3/product/{code}`); **text search uses Search-a-licious** (`search.openfoodfacts.org/search`) because the v2 search API has no full-text search and `cgi/search.pl` is legacy.
 - Published limits: product reads 15/min, search 10/min per IP. Tally enforces **instance-wide token buckets** (15/min, 10/min), backs off exponentially (30 s → 10 min) on 429/5xx/timeouts, and reports "online results unavailable" while backing off.
-- OFF has no per-country nutrition fields, so "prefer UK fields" means: rank `en:united-kingdom` products first, prefer `product_name_en`, use `salt_100g` over sodium, and keep both kcal and kJ as labelled.
+- OFF has no per-country nutrition fields, so "prefer UK fields" means: rank `en:united-kingdom` products first, prefer `product_name` for English-language products (else `product_name_en`), use `salt_100g` over sodium, and keep both kcal and kJ as labelled.
 - Products sold only in the US/Canada are flagged **`CarbsMayIncludeFibre`** (US labels report total carbohydrate); values are stored as provided and the UI shows a note.
 - Every fetched product (from barcode lookups *and* search hits) is upserted into `Food` with `FetchedAt`; stale products (default 30 days) are served from cache and refreshed by a background worker.
 - Barcode misses are cached for 24 h (configurable). Search results are cached per normalised query for 24 h (configurable) to stay within limits.

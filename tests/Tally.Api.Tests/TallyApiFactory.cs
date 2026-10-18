@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Tally.Api.OpenFoodFacts;
 using Testcontainers.PostgreSql;
 
 [assembly: AssemblyFixture(typeof(Tally.Api.Tests.TallyApiFactory))]
@@ -16,6 +19,8 @@ public sealed class TallyApiFactory : WebApplicationFactory<Program>, IAsyncLife
 
     public string ConnectionString => _postgres.GetConnectionString();
 
+    public FakeOffHandler Off { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
@@ -26,6 +31,13 @@ public sealed class TallyApiFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Tally", _postgres.GetConnectionString());
+        builder.UseSetting("Tally:OpenFoodFacts:ContactEmail", "tests@example.com");
+        builder.UseSetting("Tally:OpenFoodFacts:ProductBaseUrl", "http://off.test");
+        builder.UseSetting("Tally:OpenFoodFacts:SearchBaseUrl", "http://search.off.test");
+        builder.UseSetting("Tally:OpenFoodFacts:ProductRequestsPerMinute", "6000");
+        builder.UseSetting("Tally:OpenFoodFacts:SearchRequestsPerMinute", "6000");
+        builder.ConfigureTestServices(services =>
+            services.AddHttpClient<OffClient>().ConfigurePrimaryHttpMessageHandler(() => Off));
     }
 
     public override async ValueTask DisposeAsync()
