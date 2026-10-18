@@ -1,18 +1,19 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Tally.Api;
 using Tally.Api.Data;
-using System.Text.Json.Serialization;
 using Tally.Api.Features.Diary;
 using Tally.Api.Features.Foods;
 using Tally.Api.Features.Goals;
 using Tally.Api.Features.History;
 using Tally.Api.Features.Import;
-using Tally.Api.Features.Restaurants;
 using Tally.Api.Features.Profiles;
 using Tally.Api.Features.Recipes;
-using Tally.Api.OpenFoodFacts;
+using Tally.Api.Features.Restaurants;
 using Tally.Api.Infrastructure;
+using Tally.Api.OpenFoodFacts;
 
 if (args.FirstOrDefault() == "healthcheck")
     return await HealthProbe.RunAsync();
@@ -38,7 +39,7 @@ builder.Services.AddSingleton<OffRateGate>();
 builder.Services.AddSingleton<OffRefreshQueue>();
 builder.Services.AddHostedService<OffRefreshWorker>();
 builder.Services.AddHttpClient<OffClient>((sp, http) =>
-    http.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TallyOptions>>().Value.OpenFoodFacts.TimeoutSeconds));
+    http.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<TallyOptions>>().Value.OpenFoodFacts.TimeoutSeconds));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddProblemDetails();
 // Imports can be a few hundred KB of CSV/JSON.
@@ -69,13 +70,14 @@ await using (var scope = app.Services.CreateAsyncScope())
     await cofid.SeedIfEmptyAsync(CancellationToken.None);
 }
 
+var staticFiles = StaticCaching.Options();
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(staticFiles);
 
 app.MapHealthChecks("/healthz");
 
 var api = app.MapGroup("/api");
-api.MapGet("/config", (Microsoft.Extensions.Options.IOptions<TallyOptions> o, Clock clock) =>
+api.MapGet("/config", (IOptions<TallyOptions> o, Clock clock) =>
     new { version = AppInfo.Version, timeZone = o.Value.TimeZone, today = clock.Today, onlineEnabled = o.Value.OpenFoodFacts.Enabled });
 api.MapProfileEndpoints();
 
@@ -95,7 +97,7 @@ scoped.MapHistoryEndpoints();
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());
 
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFiles);
 
 app.Run();
 return 0;

@@ -18,8 +18,24 @@
 
 - **Phase 8 — History and export:** `/api/history` returns every day in a range with totals, average per nutrient over logged days only, macro energy split (UK factors), and days on target (energy ±10% and no limit exceeded); CSV export (one row per entry: date, meal, food, brand, source, quantity, unit, serving, amount and all nutrients; blanks for unknowns). History page with week (Mon–Sun) / month navigation, summary tiles, daily energy bar chart against the target (Recharts, tooltip), averages vs goals, macro split bar + table, day-by-day table, and CSV download for any date range.
 
-## Next
-- Phase 9 — PWA, icons, mobile polish, empty/error states, README.
+- **Phase 9 — PWA and polish:** web manifest, generated icons (`tools/icons/make_icons.py`, incl. maskable and Apple touch icon), Workbox service worker caching the app shell only, cache headers for shell vs hashed assets, offline banner, top-level error boundary, empty states throughout, mobile layout pass, full README (first run, NPM setup, HTTPS/camera, backup/restore, updating, licences, development).
 
-## Known issues
-- None yet.
+## Status
+
+All phases complete. **73 backend tests** (xUnit v3, real Postgres via Testcontainers) and **38 frontend tests** (Vitest + RTL) pass; `docker compose up -d --build` from a clean copy with `.env.example` starts healthy with CoFID loaded; the README backup/restore commands were exercised against that fresh stack.
+
+Definition-of-done checks:
+- Fresh `cp .env.example .env && docker compose up -d --build` → healthy app with 2,887 CoFID foods. ✔
+- "chicken breast" → CoFID generic results first; UK product search (e.g. "heinz baked beans") → OFF results with UK items first (checked live). ✔
+- Shared restaurant item visible to a second profile, copyable but not editable (403) — covered by `CustomFoodTests`. ✔
+- Editing a food after logging leaves past entries unchanged — covered by `DiaryTests`, `CustomFoodTests`, `RecipeTests`. ✔
+- Profile → scan → log → totals: exercised in a desktop browser at phone size with manual barcode entry and search; the live-camera path is covered by component tests only (see limitations).
+
+## Known limitations
+- **Not tested on physical phones.** Camera scanning (BarcodeDetector on Android, ZXing on iOS Safari) and PWA install need an HTTPS deployment behind NPM to try on real devices; this has not been done yet.
+- The service worker was verified in headless Chromium; the Claude desktop browser pane used for UI checks refuses service worker registration, so install/update behaviour wasn't checked there.
+- OFF data quality varies (e.g. some products' English name is odd, or nutrition is missing); Tally shows what OFF has, with "–" for unknowns.
+- Search-a-licious has no rate limit of its own documented; Tally applies OFF's 10 searches/minute to it. Heavy simultaneous use by several people can show "online search is rate limited" for a minute; local and cached results are unaffected.
+- CoFID fibre falls back to NSP where AOAC isn't published, which reads lower than UK label fibre.
+- No authentication by design: anyone who can reach the URL can pick any profile. Use NPM access lists if you need a gate.
+- Restaurant example data in `examples/` is illustrative, not official nutrition information.

@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
+import { OfflineBanner } from './components/OfflineBanner';
 import { AddFoodPage } from './diary/AddFoodPage';
 import { DiaryPage } from './diary/DiaryPage';
 import { FoodDetailPage } from './foods/FoodDetailPage';
@@ -52,12 +54,15 @@ function AppRoutes() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <ConfigProvider>
-        <ProfileProvider>
-          <AppRoutes />
-        </ProfileProvider>
-      </ConfigProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <OfflineBanner />
+        <ConfigProvider>
+          <ProfileProvider>
+            <AppRoutes />
+          </ProfileProvider>
+        </ConfigProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
