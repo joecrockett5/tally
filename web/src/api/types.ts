@@ -161,3 +161,56 @@ export interface ImportResult {
   skippedDuplicates: number;
   skippedInvalid: number;
 }
+
+export interface Ingredient {
+  id: string;
+  food: Food;
+  unit: QuantityUnit;
+  quantity: number;
+  servingName: string | null;
+  servingAmount: number | null;
+  amount: number;
+  nutrients: Nutrients;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  servings: number;
+  cookedWeightGrams: number | null;
+  ingredients: Ingredient[];
+  totals: NutrientTotals;
+  perServing: Nutrients;
+  per100g: Nutrients | null;
+}
+
+export interface RecipeSummary {
+  id: string;
+  name: string;
+  servings: number;
+  cookedWeightGrams: number | null;
+  ingredientCount: number;
+  perServing: Nutrients;
+}
+
+export interface SavedMealItem {
+  id: string;
+  foodId: string | null;
+  recipeId: string | null;
+  name: string;
+  source: FoodSourceLabel;
+  unit: QuantityUnit;
+  quantity: number;
+  servingName: string | null;
+  servingAmount: number | null;
+  portionName: string | null;
+  basis: Basis;
+  nutrients: Nutrients;
+}
+
+export interface SavedMeal {
+  id: string;
+  name: string;
+  items: SavedMealItem[];
+  totals: NutrientTotals;
+}

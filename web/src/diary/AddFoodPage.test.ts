@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { food } from '../test/fixtures';
-import { mergeResults } from './AddFoodPage';
+import { mergeResults } from '../lib/useFoodSearch';
 
 describe('mergeResults', () => {
   it('keeps local results first and drops online duplicates by barcode', () => {

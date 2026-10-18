@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Tally.Api.Data;
+using Tally.Api.Features.Recipes;
 using Tally.Api.Infrastructure;
 
 namespace Tally.Api.Features.Diary;
@@ -15,9 +16,21 @@ public static class DiaryEndpoints
                 ? Results.Ok(await diary.GetDayAsync(profile.Id, day, ct))
                 : BadDate());
 
-        g.MapPost("/entries", async (LogEntryRequest req, DiaryService diary, TallyDbContext db, ProfileContext profile, CancellationToken ct) =>
+        g.MapPost("/entries", async (LogEntryRequest req, DiaryService diary, RecipeService recipes, TallyDbContext db, ProfileContext profile, CancellationToken ct) =>
         {
             if (!Clock.TryParseDate(req.Date, out var date)) return BadDate();
+
+            if (req.RecipeId is { } recipeId)
+            {
+                var recipe = await recipes.Recipes(profile.Id).AsNoTracking().AsSplitQuery().FirstOrDefaultAsync(r => r.Id == recipeId, ct);
+                if (recipe is null) return Results.NotFound();
+                var recipeEntry = RecipeService.Snapshot(recipe, profile.Id, date, req.Meal, req.Unit, req.Quantity, out var recipeError);
+                if (recipeEntry is null) return Results.Problem(recipeError, statusCode: 400, title: "invalid_quantity");
+                db.DiaryEntries.Add(recipeEntry);
+                await db.SaveChangesAsync(ct);
+                return Results.Created($"/api/diary/entries/{recipeEntry.Id}", EntryDto.From(recipeEntry));
+            }
+
             if (req.FoodId is not { } foodId)
                 return Results.Problem("Choose a food to log.", statusCode: 400, title: "food_required");
 

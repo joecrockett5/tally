@@ -128,6 +128,8 @@ namespace Tally.Api.Data.Migrations
 
                     b.HasIndex("FoodId");
 
+                    b.HasIndex("RecipeId");
+
                     b.HasIndex("ProfileId", "CreatedAt");
 
                     b.HasIndex("ProfileId", "Date");
@@ -369,6 +371,81 @@ namespace Tally.Api.Data.Migrations
                     b.ToTable("Profiles");
                 });
 
+            modelBuilder.Entity("Tally.Api.Data.Recipe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("CookedWeightGrams")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Servings")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("Recipes");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.RecipeIngredient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Amount")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("FoodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Quantity")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("ServingAmount")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ServingName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodId");
+
+                    b.HasIndex("RecipeId");
+
+                    b.ToTable("RecipeIngredient");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.Restaurant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -396,6 +473,77 @@ namespace Tally.Api.Data.Migrations
                     b.ToTable("Restaurants");
                 });
 
+            modelBuilder.Entity("Tally.Api.Data.SavedMeal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId");
+
+                    b.ToTable("SavedMeals");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.SavedMealItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Amount")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("FoodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Quantity")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SavedMealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("ServingAmount")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ServingName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodId");
+
+                    b.HasIndex("RecipeId");
+
+                    b.HasIndex("SavedMealId");
+
+                    b.ToTable("SavedMealItem");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.DiaryEntry", b =>
                 {
                     b.HasOne("Tally.Api.Data.Food", null)
@@ -408,6 +556,11 @@ namespace Tally.Api.Data.Migrations
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Tally.Api.Data.Recipe", null)
+                        .WithMany()
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Tally.Api.Data.Food", b =>
@@ -434,9 +587,77 @@ namespace Tally.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Tally.Api.Data.Recipe", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Profile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.RecipeIngredient", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Food", "Food")
+                        .WithMany()
+                        .HasForeignKey("FoodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tally.Api.Data.Recipe", null)
+                        .WithMany("Ingredients")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Food");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.SavedMeal", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Profile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.SavedMealItem", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Food", "Food")
+                        .WithMany()
+                        .HasForeignKey("FoodId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Tally.Api.Data.Recipe", "Recipe")
+                        .WithMany()
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Tally.Api.Data.SavedMeal", null)
+                        .WithMany("Items")
+                        .HasForeignKey("SavedMealId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Food");
+
+                    b.Navigation("Recipe");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.Food", b =>
                 {
                     b.Navigation("Servings");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.Recipe", b =>
+                {
+                    b.Navigation("Ingredients");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.SavedMeal", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

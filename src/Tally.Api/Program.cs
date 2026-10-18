@@ -8,6 +8,7 @@ using Tally.Api.Features.Foods;
 using Tally.Api.Features.Import;
 using Tally.Api.Features.Restaurants;
 using Tally.Api.Features.Profiles;
+using Tally.Api.Features.Recipes;
 using Tally.Api.OpenFoodFacts;
 using Tally.Api.Infrastructure;
 
@@ -28,6 +29,7 @@ builder.Services.AddScoped<CofidImporter>();
 builder.Services.AddScoped<FoodSearch>();
 builder.Services.AddScoped<DiaryService>();
 builder.Services.AddScoped<FoodImport>();
+builder.Services.AddScoped<RecipeService>();
 builder.Services.AddSingleton<Clock>();
 builder.Services.AddScoped<OffFoodService>();
 builder.Services.AddSingleton<OffRateGate>();
@@ -84,6 +86,8 @@ scoped.MapFoodEndpoints();
 scoped.MapCustomFoodEndpoints();
 scoped.MapRestaurantEndpoints();
 scoped.MapImportEndpoints();
+scoped.MapRecipeEndpoints();
+scoped.MapSavedMealEndpoints();
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());
 

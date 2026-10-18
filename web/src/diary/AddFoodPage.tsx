@@ -1,72 +1,85 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client';
-import { MEALS, type BarcodeLookup, type Food, type Meal, type OnlineSearch, type QuickPick } from '../api/types';
+import { MEALS, type BarcodeLookup, type Food, type Meal, type QuickPick, type Recipe, type RecipeSummary, type SavedMeal } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { FoodRow } from '../components/FoodRow';
+import { FoodSearchResults } from '../components/FoodSearchResults';
 import type { QuantityChoice } from '../components/QuantityPicker';
-import { describeQuantity } from '../lib/nutrients';
+import { describeQuantity, formatNutrient } from '../lib/nutrients';
 import { useApi } from '../lib/useApi';
-import { useDebounced } from '../lib/useDebounced';
-import { useConfig } from '../profile/ConfigProvider';
-import { LogFoodSheet, OffAttribution } from './LogFoodSheet';
+import { useFoodSearch } from '../lib/useFoodSearch';
+import { LogRecipeSheet } from '../recipes/LogRecipeSheet';
+import { LogFoodSheet } from './LogFoodSheet';
 import { Scanner, type ScanResult } from './Scanner';
 
-type QuickTab = 'recent' | 'frequent';
+type QuickTab = 'recent' | 'frequent' | 'recipes' | 'meals';
 
-/** Merges online results into local ones, dropping products already listed (by barcode or id). */
-export function mergeResults(local: Food[], online: Food[]): Food[] {
-  const ids = new Set(local.map((f) => f.id));
-  const barcodes = new Set(local.map((f) => f.barcode).filter(Boolean));
-  return [...local, ...online.filter((f) => !ids.has(f.id) && !(f.barcode && barcodes.has(f.barcode)))];
-}
+const TABS: [QuickTab, string][] = [
+  ['recent', 'Recent'],
+  ['frequent', 'Frequent'],
+  ['recipes', 'Recipes'],
+  ['meals', 'Saved meals'],
+];
 
 export function AddFoodPage() {
   const { date = '', meal: mealParam } = useParams();
   const meal = (MEALS.find((m) => m.toLowerCase() === mealParam?.toLowerCase()) ?? 'Snacks') as Meal;
   const navigate = useNavigate();
-  const { onlineEnabled } = useConfig();
 
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<QuickTab>('recent');
   const [selected, setSelected] = useState<{ food: Food; initial?: QuantityChoice } | null>(null);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanOutcome, setScanOutcome] = useState<BarcodeLookup | null>(null);
-  const [scanError, setScanError] = useState<Error>();
+  const [error, setError] = useState<Error>();
 
-  const localQ = useDebounced(q.trim(), 200);
-  const onlineQ = useDebounced(q.trim(), 600);
-
-  const local = useApi(
-    (s) => (localQ ? api.get<Food[]>(`/api/foods/search?q=${encodeURIComponent(localQ)}`, s) : Promise.resolve([])),
-    [localQ],
+  const search = useFoodSearch(q);
+  // Tagged with its tab so a stale list is never rendered as another tab's type.
+  const quickData = useApi<{ tab: QuickTab; items: unknown[] }>(
+    async (s) => ({
+      tab,
+      items:
+        tab === 'recipes'
+          ? await api.get<RecipeSummary[]>('/api/recipes', s)
+          : tab === 'meals'
+            ? await api.get<SavedMeal[]>('/api/saved-meals', s)
+            : await api.get<QuickPick[]>(`/api/foods/${tab}`, s),
+    }),
+    [tab],
   );
-  const online = useApi(
-    (s) =>
-      onlineEnabled && onlineQ.length >= 3
-        ? api.get<OnlineSearch>(`/api/foods/search/online?q=${encodeURIComponent(onlineQ)}`, s)
-        : Promise.resolve<OnlineSearch>({ available: true, message: null, results: [] }),
-    [onlineQ, onlineEnabled],
-  );
-  const quick = useApi((s) => api.get<QuickPick[]>(`/api/foods/${tab}`, s), [tab]);
-
-  const results = mergeResults(local.data ?? [], online.data?.results ?? []);
+  const quick = { ...quickData, data: quickData.data?.tab === tab ? quickData.data.items : undefined };
   const searching = q.trim().length > 0;
-  const onlinePending = searching && q.trim().length >= 3 && (onlineQ !== q.trim() || online.loading);
-  const showsOff = results.some((f) => f.source === 'off');
+  const backToDiary = () => navigate(`/diary/${date}`);
 
   const onScan = async ({ code, format }: ScanResult) => {
     setScanning(false);
-    setScanError(undefined);
+    setError(undefined);
     setScanOutcome(null);
     try {
-      const result = await api.get<BarcodeLookup>(
-        `/api/foods/barcode/${encodeURIComponent(code)}${format ? `?format=${format}` : ''}`,
-      );
+      const result = await api.get<BarcodeLookup>(`/api/foods/barcode/${encodeURIComponent(code)}${format ? `?format=${format}` : ''}`);
       if (result.status === 'found' && result.food) setSelected({ food: result.food });
       else setScanOutcome(result);
     } catch (err) {
-      setScanError(err as Error);
+      setError(err as Error);
+    }
+  };
+
+  const openRecipe = async (id: string) => {
+    try {
+      setRecipe(await api.get<Recipe>(`/api/recipes/${id}`));
+    } catch (err) {
+      setError(err as Error);
+    }
+  };
+
+  const logSavedMeal = async (m: SavedMeal) => {
+    try {
+      await api.post(`/api/saved-meals/${m.id}/log`, { date, meal });
+      backToDiary();
+    } catch (err) {
+      setError(err as Error);
     }
   };
 
@@ -94,104 +107,110 @@ export function AddFoodPage() {
         </button>
       </div>
 
-      <ErrorNote error={scanError} />
+      <ErrorNote error={error} />
       {scanOutcome && (
         <div className="card stack" role="status">
-          {scanOutcome.status === 'not_found' ? (
-            <>
-              <p>
-                <strong>Barcode {scanOutcome.barcode} wasn't found.</strong> {scanOutcome.message}
-              </p>
-              <Link className="button button-primary" to={`/foods/new?barcode=${scanOutcome.barcode}`}>
-                Add this product
-              </Link>
-            </>
-          ) : (
-            <>
-              <p>
-                <strong>Couldn't look up {scanOutcome.barcode}.</strong> {scanOutcome.message ?? 'Online results are unavailable.'}
-              </p>
-              <Link className="button" to={`/foods/new?barcode=${scanOutcome.barcode}`}>
-                Add it manually
-              </Link>
-            </>
-          )}
+          <p>
+            <strong>
+              {scanOutcome.status === 'not_found' ? `Barcode ${scanOutcome.barcode} wasn't found.` : `Couldn't look up ${scanOutcome.barcode}.`}
+            </strong>{' '}
+            {scanOutcome.message ?? 'Online results are unavailable.'}
+          </p>
+          <Link className={`button${scanOutcome.status === 'not_found' ? ' button-primary' : ''}`} to={`/foods/new?barcode=${scanOutcome.barcode}`}>
+            {scanOutcome.status === 'not_found' ? 'Add this product' : 'Add it manually'}
+          </Link>
         </div>
       )}
 
-      {!searching ? (
+      {searching ? (
+        <section className="card">
+          <FoodSearchResults
+            search={search}
+            query={q}
+            onSelect={(food) => setSelected({ food })}
+            empty={
+              <Link className="button" to={`/foods/new?name=${encodeURIComponent(q.trim())}`}>
+                Create a food
+              </Link>
+            }
+          />
+        </section>
+      ) : (
         <section className="card">
           <div className="chips" role="tablist">
-            {(['recent', 'frequent'] as const).map((t) => (
+            {TABS.map(([t, label]) => (
               <button key={t} type="button" role="tab" className="chip" aria-selected={tab === t} aria-pressed={tab === t} onClick={() => setTab(t)}>
-                {t === 'recent' ? 'Recent' : 'Frequent'}
+                {label}
               </button>
             ))}
           </div>
           <ErrorNote error={quick.error} onRetry={quick.reload} />
-          {quick.data?.length === 0 && (
-            <p className="empty">Nothing yet. Search for a food or scan a barcode to get started.</p>
+          {!quick.loading && quick.data?.length === 0 && (
+            <p className="empty">
+              {tab === 'recipes' ? (
+                <>No recipes yet. <Link to="/recipes/new">Create one</Link>.</>
+              ) : tab === 'meals' ? (
+                'No saved meals yet. Use “Save as meal” on a meal in your diary.'
+              ) : (
+                'Nothing yet. Search for a food or scan a barcode to get started.'
+              )}
+            </p>
           )}
           <ul className="food-list">
-            {quick.data?.map((p) => (
-              <FoodRow
-                key={p.food.id}
-                food={p.food}
-                detail={`Last: ${describeQuantity({
-                  unit: p.unit,
-                  quantity: p.quantity,
-                  servingName: p.food.servings.find((s) => s.id === p.servingId)?.name,
-                  portionName: p.food.portionName,
-                })}${tab === 'frequent' ? ` · logged ${p.timesLogged}×` : ''}`}
-                onSelect={() => setSelected({ food: p.food, initial: { unit: p.unit, quantity: p.quantity, servingId: p.servingId } })}
-              />
-            ))}
+            {tab === 'recipes'
+              ? (quick.data as RecipeSummary[] | undefined)?.map((r) => (
+                  <li key={r.id}>
+                    <button type="button" className="food-row" onClick={() => openRecipe(r.id)}>
+                      <span className="grow">
+                        <span className="food-row-name">{r.name}</span>
+                        <span className="food-row-detail">
+                          {r.ingredientCount} ingredient{r.ingredientCount === 1 ? '' : 's'} · makes {r.servings}
+                        </span>
+                      </span>
+                      <span className="food-row-energy num">
+                        <strong>{formatNutrient(r.perServing.energyKcal, 'energyKcal')}</strong>
+                        <span className="small muted">kcal /serving</span>
+                      </span>
+                    </button>
+                  </li>
+                ))
+              : tab === 'meals'
+                ? (quick.data as SavedMeal[] | undefined)?.map((m) => (
+                    <li key={m.id}>
+                      <button type="button" className="food-row" onClick={() => logSavedMeal(m)} aria-label={`Log ${m.name}`}>
+                        <span className="grow">
+                          <span className="food-row-name">{m.name}</span>
+                          <span className="food-row-detail truncate">{m.items.map((i) => i.name).join(', ')}</span>
+                        </span>
+                        <span className="food-row-energy num">
+                          <strong>{formatNutrient(m.totals.values.energyKcal, 'energyKcal')}</strong>
+                          <span className="small muted">kcal · tap to add</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))
+                : (quick.data as QuickPick[] | undefined)?.map((p) => (
+                    <FoodRow
+                      key={p.food.id}
+                      food={p.food}
+                      detail={`Last: ${describeQuantity({
+                        unit: p.unit,
+                        quantity: p.quantity,
+                        servingName: p.food.servings.find((s) => s.id === p.servingId)?.name,
+                        portionName: p.food.portionName,
+                      })}${tab === 'frequent' ? ` · logged ${p.timesLogged}×` : ''}`}
+                      onSelect={() => setSelected({ food: p.food, initial: { unit: p.unit, quantity: p.quantity, servingId: p.servingId } })}
+                    />
+                  ))}
           </ul>
-        </section>
-      ) : (
-        <section className="card">
-          <ErrorNote error={local.error} onRetry={local.reload} />
-          {results.length > 0 && (
-            <ul className="food-list">
-              {results.map((f) => (
-                <FoodRow key={f.id} food={f} onSelect={(food) => setSelected({ food })} />
-              ))}
-            </ul>
-          )}
-          {!local.loading && !onlinePending && results.length === 0 && (
-            <div className="empty stack">
-              <p>No foods match “{q.trim()}”.</p>
-              <Link className="button" to={`/foods/new?name=${encodeURIComponent(q.trim())}`}>
-                Create a food
-              </Link>
-            </div>
-          )}
-          <p className="small muted online-status" aria-live="polite">
-            {!onlineEnabled
-              ? 'Online search is turned off on this server.'
-              : q.trim().length < 3
-                ? 'Type at least 3 letters to include Open Food Facts.'
-                : onlinePending
-                  ? 'Searching Open Food Facts…'
-                  : online.error || online.data?.available === false
-                    ? `Online results unavailable${online.data?.message ? `: ${online.data.message}` : ''}. Showing local foods only.`
-                    : online.data?.message ?? ''}
-          </p>
-          {showsOff && <OffAttribution />}
         </section>
       )}
 
       {scanning && <Scanner onDetected={onScan} onClose={() => setScanning(false)} />}
       {selected && (
-        <LogFoodSheet
-          food={selected.food}
-          initial={selected.initial}
-          date={date}
-          meal={meal}
-          onClose={() => setSelected(null)}
-          onLogged={() => navigate(`/diary/${date}`)}
-        />
+        <LogFoodSheet food={selected.food} initial={selected.initial} date={date} meal={meal} onClose={() => setSelected(null)} onLogged={backToDiary} />
       )}
+      {recipe && <LogRecipeSheet recipe={recipe} date={date} meal={meal} onClose={() => setRecipe(null)} onLogged={backToDiary} />}
     </div>
   );
 }

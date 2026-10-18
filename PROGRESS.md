@@ -12,8 +12,10 @@
 
 - **Phase 5 — Custom foods and restaurants:** create/edit/soft-delete custom foods (per 100 g, per 100 ml or portion-only; servings; optional brand, restaurant, barcode), private by default with "Share with everyone"; only the creator can edit/unshare/delete (403 otherwise); "Copy to my foods" for any visible food; restaurants list and per-restaurant items; restaurant names are part of the search vector. CSV/JSON bulk import with stateless preview (per-row validation, duplicate detection by restaurant + name or barcode, within-file repeats), commit of valid rows, private/shared chosen at import; schema in `docs/IMPORT.md`, examples in `examples/`. Frontend: Foods page (mine/shared/restaurants), food detail, food form (blank = unknown, sodium → salt), restaurant page, import page with preview table. Custom foods with a barcode win barcode lookups.
 
+- **Phase 6 — Recipes and saved meals:** recipes (private) built from any food source with quantities, servings and optional cooked weight; nutrition computed live (total, per serving, per 100 g cooked) and snapshotted when logged (by servings, or by grams when a cooked weight is set). Saved meals of foods and/or recipes, created from a diary meal ("Save as meal…") or via the API, logged in one tap with fresh snapshots. Add-food page gains Recipes and Saved meals tabs; recipe editor with ingredient search across all sources; copy meals between days was delivered in phase 4.
+
 ## Next
-- Phase 6 — Recipes and saved meals.
+- Phase 7 — Goals.
 
 ## Known issues
 - None yet.

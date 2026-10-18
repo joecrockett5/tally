@@ -11,6 +11,7 @@ import { useActiveProfile } from '../profile/ProfileProvider';
 import { CopyMealSheet } from './CopyMealSheet';
 import { DayTotals } from './DayTotals';
 import { EntrySheet } from './EntrySheet';
+import { SaveMealSheet } from './SaveMealSheet';
 
 export function DiaryPage() {
   const { date: param } = useParams();
@@ -25,6 +26,7 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
   const day = useApi((s) => api.get<Day>(`/api/diary/${date}`, s), [date, profile.id]);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [copyMeal, setCopyMeal] = useState<Meal | null>(null);
+  const [saveMeal, setSaveMeal] = useState<Meal | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const go = (d: string) => {
@@ -93,6 +95,7 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
                     hasEntries={entries.length > 0}
                     onCopyYesterday={() => copyFromYesterday(meal)}
                     onCopyFrom={() => setCopyMeal(meal)}
+                    onSave={() => setSaveMeal(meal)}
                   />
                 </span>
               </header>
@@ -132,6 +135,17 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
           }}
         />
       )}
+      {saveMeal && (
+        <SaveMealSheet
+          date={date}
+          meal={saveMeal}
+          onClose={() => setSaveMeal(null)}
+          onSaved={(name) => {
+            setSaveMeal(null);
+            setNotice(`Saved “${name}”. Find it under Saved meals when adding food.`);
+          }}
+        />
+      )}
       {copyMeal && (
         <CopyMealSheet
           date={date}
@@ -153,9 +167,10 @@ interface MealMenuProps {
   hasEntries: boolean;
   onCopyYesterday: () => void;
   onCopyFrom: () => void;
+  onSave: () => void;
 }
 
-function MealMenu({ meal, onCopyYesterday, onCopyFrom }: MealMenuProps) {
+function MealMenu({ meal, hasEntries, onCopyYesterday, onCopyFrom, onSave }: MealMenuProps) {
   const [open, setOpen] = useState(false);
   const pick = (fn: () => void) => () => {
     setOpen(false);
@@ -183,6 +198,11 @@ function MealMenu({ meal, onCopyYesterday, onCopyFrom }: MealMenuProps) {
             <button type="button" role="menuitem" onClick={pick(onCopyFrom)}>
               Copy from a date…
             </button>
+            {hasEntries && (
+              <button type="button" role="menuitem" onClick={pick(onSave)}>
+                Save as meal…
+              </button>
+            )}
           </span>
         </>
       )}

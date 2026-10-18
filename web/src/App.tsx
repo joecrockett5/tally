@@ -8,6 +8,10 @@ import { FoodsPage } from './foods/FoodsPage';
 import { ImportPage } from './foods/ImportPage';
 import { RestaurantPage } from './foods/RestaurantPage';
 import { ProfilePicker } from './pages/ProfilePicker';
+import { RecipeDetailPage } from './recipes/RecipeDetailPage';
+import { RecipeFormPage } from './recipes/RecipeFormPage';
+import { RecipesPage } from './recipes/RecipesPage';
+import { SavedMealPage } from './recipes/SavedMealPage';
 import { ConfigProvider } from './profile/ConfigProvider';
 import { ProfileProvider, useProfile } from './profile/ProfileProvider';
 
@@ -28,6 +32,11 @@ function AppRoutes() {
           <Route path="/foods/:id" element={<FoodDetailPage />} />
           <Route path="/foods/:id/edit" element={<FoodFormPage />} />
           <Route path="/restaurants/:id" element={<RestaurantPage />} />
+          <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/recipes/new" element={<RecipeFormPage />} />
+          <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+          <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
+          <Route path="/meals/:id" element={<SavedMealPage />} />
           <Route path="*" element={<Navigate to="/diary" replace />} />
         </Route>
       ) : (

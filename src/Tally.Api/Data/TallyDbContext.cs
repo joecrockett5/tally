@@ -11,6 +11,8 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
     public DbSet<OffBarcodeMiss> OffBarcodeMisses => Set<OffBarcodeMiss>();
     public DbSet<OffSearchCache> OffSearchCache => Set<OffSearchCache>();
     public DbSet<DiaryEntry> DiaryEntries => Set<DiaryEntry>();
+    public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<SavedMeal> SavedMeals => Set<SavedMeal>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder c)
     {
@@ -77,8 +79,38 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
             e.ComplexProperty(d => d.PerBasis);
             e.HasOne<Profile>().WithMany().HasForeignKey(d => d.ProfileId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Food>().WithMany().HasForeignKey(d => d.FoodId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Recipe>().WithMany().HasForeignKey(d => d.RecipeId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(d => new { d.ProfileId, d.Date });
             e.HasIndex(d => new { d.ProfileId, d.CreatedAt });
+        });
+
+        b.Entity<Recipe>(e =>
+        {
+            e.Property(r => r.Name).HasMaxLength(200);
+            e.HasOne<Profile>().WithMany().HasForeignKey(r => r.ProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(r => r.Ingredients).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(r => r.ProfileId);
+        });
+
+        b.Entity<RecipeIngredient>(e =>
+        {
+            e.Property(i => i.ServingName).HasMaxLength(100);
+            e.HasOne(i => i.Food).WithMany().HasForeignKey(i => i.FoodId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<SavedMeal>(e =>
+        {
+            e.Property(m => m.Name).HasMaxLength(200);
+            e.HasOne<Profile>().WithMany().HasForeignKey(m => m.ProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(m => m.Items).WithOne().HasForeignKey(i => i.SavedMealId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(m => m.ProfileId);
+        });
+
+        b.Entity<SavedMealItem>(e =>
+        {
+            e.Property(i => i.ServingName).HasMaxLength(100);
+            e.HasOne(i => i.Food).WithMany().HasForeignKey(i => i.FoodId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(i => i.Recipe).WithMany().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<OffSearchCache>(e =>
