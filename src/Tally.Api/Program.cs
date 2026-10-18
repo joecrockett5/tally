@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Tally.Api;
 using Tally.Api.Data;
 using System.Text.Json.Serialization;
+using Tally.Api.Features.Diary;
 using Tally.Api.Features.Foods;
 using Tally.Api.Features.Profiles;
 using Tally.Api.OpenFoodFacts;
@@ -23,6 +24,8 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddScoped<CofidImporter>();
 builder.Services.AddScoped<FoodSearch>();
+builder.Services.AddScoped<DiaryService>();
+builder.Services.AddSingleton<Clock>();
 builder.Services.AddScoped<OffFoodService>();
 builder.Services.AddSingleton<OffRateGate>();
 builder.Services.AddSingleton<OffRefreshQueue>();
@@ -63,14 +66,15 @@ app.UseStaticFiles();
 app.MapHealthChecks("/healthz");
 
 var api = app.MapGroup("/api");
-api.MapGet("/config", (Microsoft.Extensions.Options.IOptions<TallyOptions> o) =>
-    new { version = AppInfo.Version, timeZone = o.Value.TimeZone });
+api.MapGet("/config", (Microsoft.Extensions.Options.IOptions<TallyOptions> o, Clock clock) =>
+    new { version = AppInfo.Version, timeZone = o.Value.TimeZone, today = clock.Today, onlineEnabled = o.Value.OpenFoodFacts.Enabled });
 api.MapProfileEndpoints();
 
 // Everything below acts on behalf of a profile.
 var scoped = api.MapGroup("").RequireProfile();
 scoped.MapGet("/me", async (ProfileContext profile, TallyDbContext db) =>
     await db.Profiles.Where(p => p.Id == profile.Id).Select(p => new ProfileDto(p.Id, p.Name, p.Avatar, p.Colour)).FirstAsync());
+scoped.MapDiaryEndpoints();
 scoped.MapFoodEndpoints();
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());

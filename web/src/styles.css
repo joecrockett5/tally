@@ -598,3 +598,320 @@ ul {
   gap: 8px;
   margin: 4px 0 12px;
 }
+
+/* ---- Badges ------------------------------------------------------------ */
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.badge-mine {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.badge-shared {
+  background: color-mix(in srgb, #2f5d9b 16%, var(--surface));
+  color: color-mix(in srgb, #2f5d9b 80%, var(--text));
+}
+.badge-restaurant {
+  background: color-mix(in srgb, #b5651d 18%, var(--surface));
+  color: color-mix(in srgb, #b5651d 85%, var(--text));
+}
+.badge-cofid {
+  background: color-mix(in srgb, #3c7d2b 16%, var(--surface));
+  color: color-mix(in srgb, #3c7d2b 85%, var(--text));
+}
+.badge-off {
+  background: color-mix(in srgb, #c98a12 18%, var(--surface));
+  color: color-mix(in srgb, #8a5d08 85%, var(--text));
+}
+.badge-recipe {
+  background: color-mix(in srgb, #6b4fa0 16%, var(--surface));
+  color: color-mix(in srgb, #6b4fa0 85%, var(--text));
+}
+
+/* ---- Lists of foods / entries ------------------------------------------ */
+.food-list > li + li,
+.entry-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.food-row,
+.entry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 2px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  min-height: 52px;
+}
+.food-row:hover,
+.entry-row:hover {
+  background: var(--surface-2);
+}
+.food-row-name,
+.entry-name {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.food-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  min-width: 0;
+}
+.food-row-detail,
+.entry-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.food-row-energy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+}
+.entry-kcal {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  position: sticky;
+  top: calc(var(--header-height) + env(safe-area-inset-top));
+  z-index: 5;
+  padding: 6px 0;
+  background: var(--bg);
+}
+.online-status {
+  margin-top: 10px;
+}
+.attribution {
+  margin-top: 6px;
+}
+
+/* ---- Nutrition table --------------------------------------------------- */
+.nutrition-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.nutrition-table caption {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+.nutrition-table th,
+.nutrition-table td {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.nutrition-table th {
+  text-align: left;
+  font-weight: 500;
+}
+.nutrition-table td {
+  text-align: right;
+}
+.nutrition-table tr.indent th,
+.progress-list li.indent {
+  padding-left: 14px;
+  color: var(--muted);
+}
+.unknown-mark {
+  margin-left: 3px;
+  font-size: 0.75rem;
+  color: var(--warn);
+  text-decoration: none;
+  cursor: help;
+  font-weight: 700;
+}
+
+.quantity-picker {
+  display: flex;
+  gap: 10px;
+}
+.quantity-picker .field:first-child {
+  width: 110px;
+  flex-shrink: 0;
+}
+
+/* ---- Scanner ----------------------------------------------------------- */
+.scanner-view {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
+.scanner-view video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.scanner-guide {
+  position: absolute;
+  inset: 30% 10%;
+  border: 3px solid rgb(255 255 255 / 85%);
+  border-radius: 12px;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 30%);
+}
+.scanner-status {
+  position: absolute;
+  inset: auto 0 12px;
+  text-align: center;
+  color: #fff;
+}
+.scanner-torch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.scanner-go {
+  align-self: flex-end;
+}
+
+/* ---- Diary ------------------------------------------------------------- */
+.date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.date-nav .icon-button {
+  font-size: 1.8rem;
+  width: 48px;
+  height: 48px;
+}
+.date-nav-label {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.date-nav-main {
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.date-nav-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+.energy-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.energy-big {
+  font-size: 2rem;
+  font-weight: 800;
+}
+.energy-remaining {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.text-over {
+  color: var(--bad);
+}
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.progress {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--neutral-bar);
+  transition: width 0.25s;
+}
+.progress-good > span {
+  background: var(--good);
+}
+.progress-near > span {
+  background: var(--warn);
+}
+.progress-over > span {
+  background: var(--bad);
+}
+
+.meal .card-header {
+  margin-bottom: 0;
+}
+.add-food {
+  margin-top: 4px;
+  justify-content: flex-start;
+  padding-left: 2px;
+}
+
+/* ---- Menu -------------------------------------------------------------- */
+.menu {
+  position: relative;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+.menu-list {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.menu-list button {
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-list button:hover {
+  background: var(--surface-2);
+}

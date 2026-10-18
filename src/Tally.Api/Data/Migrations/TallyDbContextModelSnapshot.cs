@@ -25,6 +25,116 @@ namespace Tally.Api.Data.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Tally.Api.Data.DiaryEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Amount")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Basis")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("FoodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Meal")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PortionName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Quantity")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("ServingAmount")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ServingName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SourceLabel")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PerBasis", "Tally.Api.Data.DiaryEntry.PerBasis#Nutrients", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<double?>("Carbohydrate")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("EnergyKcal")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("EnergyKj")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Fat")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Fibre")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Protein")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Salt")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Saturates")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double?>("Sugars")
+                                .HasColumnType("double precision");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodId");
+
+                    b.HasIndex("ProfileId", "CreatedAt");
+
+                    b.HasIndex("ProfileId", "Date");
+
+                    b.ToTable("DiaryEntries");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.Food", b =>
                 {
                     b.Property<Guid>("Id")
@@ -280,6 +390,20 @@ namespace Tally.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Restaurants");
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.DiaryEntry", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Food", null)
+                        .WithMany()
+                        .HasForeignKey("FoodId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Tally.Api.Data.Profile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Tally.Api.Data.Food", b =>

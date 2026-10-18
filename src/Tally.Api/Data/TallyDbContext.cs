@@ -10,6 +10,7 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
     public DbSet<Restaurant> Restaurants => Set<Restaurant>();
     public DbSet<OffBarcodeMiss> OffBarcodeMisses => Set<OffBarcodeMiss>();
     public DbSet<OffSearchCache> OffSearchCache => Set<OffSearchCache>();
+    public DbSet<DiaryEntry> DiaryEntries => Set<DiaryEntry>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder c)
     {
@@ -63,6 +64,20 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
         {
             e.HasKey(m => m.Barcode);
             e.Property(m => m.Barcode).HasMaxLength(32);
+        });
+
+        b.Entity<DiaryEntry>(e =>
+        {
+            e.Property(d => d.Name).HasMaxLength(300);
+            e.Property(d => d.Brand).HasMaxLength(200);
+            e.Property(d => d.SourceLabel).HasMaxLength(24);
+            e.Property(d => d.PortionName).HasMaxLength(100);
+            e.Property(d => d.ServingName).HasMaxLength(100);
+            e.ComplexProperty(d => d.PerBasis);
+            e.HasOne<Profile>().WithMany().HasForeignKey(d => d.ProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Food>().WithMany().HasForeignKey(d => d.FoodId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(d => new { d.ProfileId, d.Date });
+            e.HasIndex(d => new { d.ProfileId, d.CreatedAt });
         });
 
         b.Entity<OffSearchCache>(e =>
