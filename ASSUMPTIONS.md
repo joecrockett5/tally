@@ -72,6 +72,11 @@ One line of reasoning each. Grouped by area.
 - "Copy meal" copies the **snapshots** of the source entries (it's a copy of what was eaten), not fresh food values.
 - Recent = last 20 distinct foods/recipes logged; Frequent = top 20 by count over the last 90 days.
 
+## History and export
+
+- CSV export uses ISO dates (`YYYY-MM-DD`) so the file sorts and imports unambiguously; the UI uses DD/MM/YYYY. Unknown nutrients are blank cells, values have up to 3 decimal places, and a UTF-8 BOM is included so Excel reads "£"/accents correctly. Text cells that start with `= + - @` are prefixed with `'` to prevent formula injection.
+- History ranges are limited to 366 days per request. Charts use the validated categorical palette (slots 1–3) with direct labels and a table view for the macro split; the energy chart has a "day by day" table equivalent.
+
 ## Recipes and saved meals
 
 - Recipe nutrition is **computed live from ingredients** when viewed and **snapshotted when logged** (per serving, or per 100 g if a cooked weight is set and the user logs by grams).

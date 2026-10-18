@@ -214,3 +214,29 @@ export interface SavedMeal {
   items: SavedMealItem[];
   totals: NutrientTotals;
 }
+
+export interface HistoryDay {
+  date: string;
+  entryCount: number;
+  totals: Nutrients;
+  incomplete: NutrientKey[];
+  onTarget: boolean | null;
+}
+
+export interface History {
+  from: string;
+  to: string;
+  days: HistoryDay[];
+  loggedDays: number;
+  averages: Nutrients;
+  macros: {
+    proteinKcal: number;
+    carbohydrateKcal: number;
+    fatKcal: number;
+    proteinPct: number;
+    carbohydratePct: number;
+    fatPct: number;
+  } | null;
+  daysOnTarget: number | null;
+  goals: Goals;
+}

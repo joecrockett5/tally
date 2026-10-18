@@ -54,6 +54,31 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   return (type.includes('json') ? await response.json() : await response.text()) as T;
 }
 
+/** Fetches a file (with the profile header) and hands it to the browser as a download. */
+export async function download(path: string, fallbackName: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (activeProfileId) headers['X-Profile-Id'] = activeProfileId;
+  const response = await fetch(path, { headers });
+  if (!response.ok) {
+    let message = `Download failed (${response.status})`;
+    try {
+      message = (await response.json()).detail ?? message;
+    } catch {
+      /* not JSON */
+    }
+    throw new ApiError(response.status, 'download_failed', message);
+  }
+  const name = /filename="?([^";]+)"?/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) => request<T>('GET', path, undefined, signal),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),

@@ -16,8 +16,10 @@
 
 - **Phase 7 — Goals:** per-profile daily targets (all optional) created with UK Reference Intakes + 30 g fibre; edit/clear/reset-to-defaults page; day view shows progress bars, kcal left/over, and colours targets (green 90–110%) differently from upper limits for sugars, saturates and salt (amber from 90%, red over). Also fixed entry ordering for copied/saved-meal entries (Postgres µs timestamps).
 
+- **Phase 8 — History and export:** `/api/history` returns every day in a range with totals, average per nutrient over logged days only, macro energy split (UK factors), and days on target (energy ±10% and no limit exceeded); CSV export (one row per entry: date, meal, food, brand, source, quantity, unit, serving, amount and all nutrients; blanks for unknowns). History page with week (Mon–Sun) / month navigation, summary tiles, daily energy bar chart against the target (Recharts, tooltip), averages vs goals, macro split bar + table, day-by-day table, and CSV download for any date range.
+
 ## Next
-- Phase 8 — History, charts and CSV export.
+- Phase 9 — PWA, icons, mobile polish, empty/error states, README.
 
 ## Known issues
 - None yet.
