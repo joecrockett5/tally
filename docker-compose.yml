@@ -1,0 +1,49 @@
+name: tally
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tally}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tally}
+      TZ: ${TALLY_TIMEZONE:-Europe/London}
+    volumes:
+      # Postgres 18 images keep PGDATA under /var/lib/postgresql/<major>/docker
+      - tally-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    build: .
+    image: tally:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    environment:
+      ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
+      TZ: ${TALLY_TIMEZONE:-Europe/London}
+      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD}"
+      Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
+      Tally__OpenFoodFacts__Enabled: ${OFF_ENABLED:-true}
+      Tally__OpenFoodFacts__ContactEmail: ${OFF_CONTACT_EMAIL:-}
+      Tally__OpenFoodFacts__ProductCacheDays: ${OFF_PRODUCT_CACHE_DAYS:-30}
+      Tally__OpenFoodFacts__NotFoundCacheHours: ${OFF_NOT_FOUND_CACHE_HOURS:-24}
+      Tally__OpenFoodFacts__SearchCacheHours: ${OFF_SEARCH_CACHE_HOURS:-24}
+    healthcheck:
+      test: ["CMD", "dotnet", "Tally.Api.dll", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  tally-db:

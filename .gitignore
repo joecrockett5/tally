@@ -1,0 +1,12 @@
+.env
+bin/
+obj/
+node_modules/
+web/dist/
+web/dev-dist/
+*.user
+.vs/
+.idea/
+.DS_Store
+TestResults/
+coverage/
