@@ -7,6 +7,7 @@ import { FoodFormPage } from './foods/FoodFormPage';
 import { FoodsPage } from './foods/FoodsPage';
 import { ImportPage } from './foods/ImportPage';
 import { RestaurantPage } from './foods/RestaurantPage';
+import { GoalsPage } from './pages/GoalsPage';
 import { ProfilePicker } from './pages/ProfilePicker';
 import { RecipeDetailPage } from './recipes/RecipeDetailPage';
 import { RecipeFormPage } from './recipes/RecipeFormPage';
@@ -37,6 +38,7 @@ function AppRoutes() {
           <Route path="/recipes/:id" element={<RecipeDetailPage />} />
           <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
           <Route path="/meals/:id" element={<SavedMealPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
           <Route path="*" element={<Navigate to="/diary" replace />} />
         </Route>
       ) : (

@@ -978,3 +978,37 @@ code {
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
+
+/* ---- Goals ------------------------------------------------------------- */
+.goal-list {
+  display: flex;
+  flex-direction: column;
+}
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.goal-row.indent {
+  padding-left: 14px;
+}
+.goal-row .badge {
+  margin-left: 6px;
+}
+.goal-input {
+  width: 96px;
+  text-align: right;
+}
+.goal-unit {
+  width: 32px;
+}
+.badge-limit {
+  background: color-mix(in srgb, var(--warn) 18%, var(--surface));
+  color: color-mix(in srgb, #8a5d08 85%, var(--text));
+}
+.badge-target {
+  background: var(--primary-soft);
+  color: var(--primary);
+}

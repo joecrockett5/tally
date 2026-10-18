@@ -10,7 +10,7 @@ public sealed class DiaryService(TallyDbContext db)
     {
         var entries = await db.DiaryEntries.AsNoTracking()
             .Where(e => e.ProfileId == profileId && e.Date == date)
-            .OrderBy(e => e.CreatedAt)
+            .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id)
             .ToListAsync(ct);
 
         var meals = Enum.GetValues<Meal>().Select(meal =>
@@ -23,8 +23,8 @@ public sealed class DiaryService(TallyDbContext db)
         return new DayDto(date, meals, NutrientTotals.Sum(entries.Select(e => e.Totals()).ToList()), goals);
     }
 
-    /// <summary>Hook for the goals feature; returns null until goals exist.</summary>
-    private Task<GoalsDto?> GoalsFor(Guid profileId, CancellationToken ct) => Task.FromResult<GoalsDto?>(null);
+    private async Task<GoalsDto?> GoalsFor(Guid profileId, CancellationToken ct) =>
+        Goals.GoalEndpoints.ToDto(await Goals.GoalEndpoints.GetOrCreateAsync(db, profileId, ct));
 
     /// <summary>Snapshots <paramref name="food"/> into a new entry (not yet added to the context).</summary>
     public static DiaryEntry Snapshot(Food food, Guid profileId, DateOnly date, Meal meal, ResolvedQuantity q) => new()
@@ -68,7 +68,7 @@ public sealed class DiaryService(TallyDbContext db)
     {
         var source = await db.DiaryEntries.AsNoTracking()
             .Where(e => e.ProfileId == profileId && e.Date == from && (fromMeal == null || e.Meal == fromMeal))
-            .OrderBy(e => e.CreatedAt)
+            .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id)
             .ToListAsync(ct);
 
         var now = DateTimeOffset.UtcNow;
@@ -93,7 +93,7 @@ public sealed class DiaryService(TallyDbContext db)
                 ServingName = e.ServingName,
                 ServingAmount = e.ServingAmount,
                 Amount = e.Amount,
-                CreatedAt = now.AddTicks(i++), // keep source order
+                CreatedAt = now.AddMicroseconds(i++), // keep source order (Postgres stores µs)
             });
         }
         await db.SaveChangesAsync(ct);

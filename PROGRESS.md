@@ -14,8 +14,10 @@
 
 - **Phase 6 — Recipes and saved meals:** recipes (private) built from any food source with quantities, servings and optional cooked weight; nutrition computed live (total, per serving, per 100 g cooked) and snapshotted when logged (by servings, or by grams when a cooked weight is set). Saved meals of foods and/or recipes, created from a diary meal ("Save as meal…") or via the API, logged in one tap with fresh snapshots. Add-food page gains Recipes and Saved meals tabs; recipe editor with ingredient search across all sources; copy meals between days was delivered in phase 4.
 
+- **Phase 7 — Goals:** per-profile daily targets (all optional) created with UK Reference Intakes + 30 g fibre; edit/clear/reset-to-defaults page; day view shows progress bars, kcal left/over, and colours targets (green 90–110%) differently from upper limits for sugars, saturates and salt (amber from 90%, red over). Also fixed entry ordering for copied/saved-meal entries (Postgres µs timestamps).
+
 ## Next
-- Phase 7 — Goals.
+- Phase 8 — History, charts and CSV export.
 
 ## Known issues
 - None yet.

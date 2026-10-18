@@ -5,6 +5,7 @@ using Tally.Api.Data;
 using System.Text.Json.Serialization;
 using Tally.Api.Features.Diary;
 using Tally.Api.Features.Foods;
+using Tally.Api.Features.Goals;
 using Tally.Api.Features.Import;
 using Tally.Api.Features.Restaurants;
 using Tally.Api.Features.Profiles;
@@ -88,6 +89,7 @@ scoped.MapRestaurantEndpoints();
 scoped.MapImportEndpoints();
 scoped.MapRecipeEndpoints();
 scoped.MapSavedMealEndpoints();
+scoped.MapGoalEndpoints();
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());
 

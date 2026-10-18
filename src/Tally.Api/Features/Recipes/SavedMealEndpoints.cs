@@ -115,7 +115,7 @@ public static class SavedMealEndpoints
                 }
 
                 if (entry is null) { skipped++; continue; }
-                entry.CreatedAt = now.AddTicks(logged.Count);
+                entry.CreatedAt = now.AddMicroseconds(logged.Count); // keep item order (Postgres stores µs)
                 logged.Add(entry);
             }
             db.DiaryEntries.AddRange(logged);

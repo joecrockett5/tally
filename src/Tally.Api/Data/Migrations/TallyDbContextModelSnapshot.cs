@@ -310,6 +310,40 @@ namespace Tally.Api.Data.Migrations
                     b.ToTable("FoodServings");
                 });
 
+            modelBuilder.Entity("Tally.Api.Data.Goal", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Carbohydrate")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("EnergyKcal")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Fat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Fibre")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Protein")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Salt")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Saturates")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Sugars")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("ProfileId");
+
+                    b.ToTable("Goals");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.OffBarcodeMiss", b =>
                 {
                     b.Property<string>("Barcode")
@@ -583,6 +617,15 @@ namespace Tally.Api.Data.Migrations
                     b.HasOne("Tally.Api.Data.Food", null)
                         .WithMany("Servings")
                         .HasForeignKey("FoodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.Goal", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Profile", null)
+                        .WithOne()
+                        .HasForeignKey("Tally.Api.Data.Goal", "ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
