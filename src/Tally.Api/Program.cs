@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Tally.Api;
 using Tally.Api.Data;
+using Tally.Api.Features.Profiles;
 using Tally.Api.Infrastructure;
 
 if (args.FirstOrDefault() == "healthcheck")
@@ -13,6 +14,7 @@ builder.Services.Configure<TallyOptions>(builder.Configuration.GetSection(TallyO
 builder.Services.AddDbContext<TallyDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Tally")
                 ?? throw new InvalidOperationException("ConnectionStrings:Tally is not configured")));
+builder.Services.AddScoped<ProfileContext>();
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -37,7 +39,14 @@ app.UseStaticFiles();
 app.MapHealthChecks("/healthz");
 
 var api = app.MapGroup("/api");
-api.MapGet("/config", () => new { version = AppInfo.Version });
+api.MapGet("/config", (Microsoft.Extensions.Options.IOptions<TallyOptions> o) =>
+    new { version = AppInfo.Version, timeZone = o.Value.TimeZone });
+api.MapProfileEndpoints();
+
+// Everything below acts on behalf of a profile.
+var scoped = api.MapGroup("").RequireProfile();
+scoped.MapGet("/me", async (ProfileContext profile, TallyDbContext db) =>
+    await db.Profiles.Where(p => p.Id == profile.Id).Select(p => new ProfileDto(p.Id, p.Name, p.Avatar, p.Colour)).FirstAsync());
 // Unknown /api routes must 404 rather than fall through to the SPA.
 api.MapFallback(() => Results.NotFound());
 
