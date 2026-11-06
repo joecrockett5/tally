@@ -1,132 +1,336 @@
-# Tally
+<div align="center">
+  <img src="docs/media/logo.svg" alt="" width="96" height="96">
+  <h1>Tally</h1>
+  <p><strong>A self-hosted food diary and nutrition tracker for the UK, for your whole household.</strong></p>
 
-A self-hosted food diary and nutrition tracker for the UK — think MyFitnessPal's diary, on your own server, for your household. Mobile-first, installable as an app (PWA), with barcode scanning.
+  [![CI](https://github.com/joecrockett5/tally/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/joecrockett5/tally/actions/workflows/ci.yml)
+  [![Version](https://img.shields.io/github/v/release/joecrockett5/tally?label=version)](https://github.com/joecrockett5/tally/releases)
+  [![ghcr.io](https://img.shields.io/badge/ghcr.io-joecrockett5%2Ftally-2496ED?logo=docker&logoColor=white)](https://github.com/joecrockett5/tally/pkgs/container/tally)
+  [![Platforms](https://img.shields.io/badge/platforms-linux%2Famd64%20%7C%20linux%2Farm64-1f6f5c)](#quick-start)
+  [![Licence: MIT](https://img.shields.io/badge/licence-MIT-1f6f5c)](LICENSE)
+</div>
 
-- **UK nutrition label set:** energy (kcal and kJ), fat, saturates, carbohydrate, sugars, fibre, protein, salt. Unknown values show as “–”, never as 0.
-- **Food data from free sources:** your own and shared foods, UK generic foods from **CoFID** (McCance and Widdowson's), and **Open Food Facts** for packaged products (UK products ranked first).
-- **Profiles, not accounts:** a Netflix-style picker. There are **no passwords by design** — run it only for people you trust, on a private network or behind your proxy.
-- Recipes, saved meals, copy meals between days, goals based on UK Reference Intakes, weekly/monthly history and CSV export.
+<p align="center">
+  <img src="docs/media/demo.gif" alt="Logging a food to dinner in Tally, then viewing history and goals" width="800">
+</p>
 
-Stack: ASP.NET Core (.NET 10) + EF Core, PostgreSQL 18, React + TypeScript + Vite. One app container and one database container.
+## Contents
 
----
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Updating and versions](#updating-and-versions)
+- [Your data](#your-data)
+- [Deploying](#deploying)
+- [Development](#development)
+- [License and credits](#license-and-credits)
 
-## First run
+## Features
 
-Requirements: Docker with the Compose plugin.
+- **UK nutrition labels:** energy (kcal and kJ), fat, saturates, carbohydrate, sugars, fibre, protein and salt. Unknown values show as “–”, never as 0.
+- **Food data from free sources:** about 2,900 UK generic foods from CoFID, plus Open Food Facts for packaged products, with UK products ranked first.
+- **Barcode scanning:** EAN-13, EAN-8, UPC-A and UPC-E, or type the number in.
+- **Your own foods:** per 100 g, per 100 ml or per portion, under a restaurant if you like, private or shared. [Bulk import](docs/IMPORT.md) from CSV or JSON.
+- **Recipes and saved meals:** nutrition worked out from the ingredients; log a usual meal in one tap, or copy meals between days.
+- **Goals:** daily targets for each profile, starting from UK Reference Intakes.
+- **History:** weekly and monthly charts, averages, macro split and CSV export.
+- **History that stays true:** entries keep the values from when you logged them, so later edits to a food never change your past days.
+- **Profiles, not accounts:** a picker for everyone in the household. There are **no passwords by design**, so run it only for people you trust, on a private network or behind your proxy.
+- **Installable:** a mobile-first app you can add to your home screen. Diary data always comes from your server; there's no offline logging.
 
-```bash
-git clone <this repo> tally && cd tally
-cp .env.example .env
-# edit .env: set POSTGRES_PASSWORD and OFF_CONTACT_EMAIL at least
-docker compose up -d --build
-```
+## Screenshots
 
-Then open `http://<server>:8080`. On first start Tally applies its database migrations and loads ~2,900 CoFID generic foods (a few seconds). Check status with:
-
-```bash
-docker compose ps
-```
-
-Both services should show `healthy`. Logs: `docker compose logs -f app`.
-
-### Configuration (`.env`)
-
-| Variable | Default | Purpose |
+| | Desktop | Phone |
 |---|---|---|
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `tally` / — / `tally` | Database credentials (password required). |
-| `APP_PORT` | `8080` | HTTP port the app listens on (inside and outside the container). |
-| `TALLY_TIMEZONE` | `Europe/London` | Decides which calendar day “today” is. Diary days are stored as local dates, so entries don't jump days at midnight or when the clocks change. |
-| `OFF_CONTACT_EMAIL` | — | Sent to Open Food Facts in the User-Agent (`Tally/<version> (<email>)`), as they ask every app to do. |
-| `OFF_ENABLED` | `true` | `false` turns off all online lookups (local and CoFID foods only). |
+| **Diary** | <img src="docs/media/diary-desktop.png" alt="Day view on desktop with totals against goals" width="480"> | <img src="docs/media/diary-mobile.png" alt="Day view on a phone" width="200"> |
+| **Food search** | <img src="docs/media/search-desktop.png" alt="Food search results on desktop" width="480"> | <img src="docs/media/search-mobile.png" alt="Food search results on a phone" width="200"> |
+| **Recipes** | <img src="docs/media/recipe-desktop.png" alt="Recipe with nutrition per serving on desktop" width="480"> | <img src="docs/media/recipe-mobile.png" alt="Recipe on a phone" width="200"> |
+| **History** | <img src="docs/media/history-desktop.png" alt="Weekly history chart on desktop" width="480"> | <img src="docs/media/history-mobile.png" alt="Weekly history chart on a phone" width="200"> |
+| **Goals** | <img src="docs/media/goals-desktop.png" alt="Daily goals form on desktop" width="480"> | <img src="docs/media/goals-mobile.png" alt="Daily goals form on a phone" width="200"> |
+| **Profiles** | <img src="docs/media/profiles-desktop.png" alt="Profile picker on desktop" width="480"> | <img src="docs/media/profiles-mobile.png" alt="Profile picker on a phone" width="200"> |
+
+These show the real app with made-up demo data. The people and the restaurant are fictional, and no photos are used.
+
+## Quick start
+
+You only need Docker with the Compose plugin. There's nothing to clone or build.
+
+**1. Create a folder with this `docker-compose.yml` in it:**
+
+```yaml
+# Runs the published image. All settings have defaults except POSTGRES_PASSWORD;
+# set them in a .env file next to this one (see .env.example).
+# To build this checkout instead, see docker-compose.build.yml.
+name: tally
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tally}
+      # Required. Use letters and digits only: it is also embedded in the app's connection string.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tally}
+      TZ: ${TALLY_TIMEZONE:-Europe/London}
+    volumes:
+      # All of Tally's data. Postgres 18 keeps PGDATA under /var/lib/postgresql/<major>/docker.
+      - tally-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    # VERSION: an image tag such as 1.0.0, 1.0 or 1. Defaults to the latest stable release.
+    image: ghcr.io/joecrockett5/tally:${VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # APP_PORT: the HTTP port, inside and outside the container.
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    environment:
+      ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
+      # TALLY_TIMEZONE: IANA timezone that decides which calendar day "today" is.
+      TZ: ${TALLY_TIMEZONE:-Europe/London}
+      Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
+      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable"
+      # OFF_ENABLED: false turns off all online Open Food Facts lookups.
+      Tally__OpenFoodFacts__Enabled: ${OFF_ENABLED:-true}
+      # OFF_CONTACT_EMAIL: sent to Open Food Facts in the User-Agent, as they ask every app to do.
+      Tally__OpenFoodFacts__ContactEmail: ${OFF_CONTACT_EMAIL:-}
+      # Cache lifetimes: products refresh after N days; missing barcodes and searches are remembered for N hours.
+      Tally__OpenFoodFacts__ProductCacheDays: ${OFF_PRODUCT_CACHE_DAYS:-30}
+      Tally__OpenFoodFacts__NotFoundCacheHours: ${OFF_NOT_FOUND_CACHE_HOURS:-24}
+      Tally__OpenFoodFacts__SearchCacheHours: ${OFF_SEARCH_CACHE_HOURS:-24}
+
+volumes:
+  tally-db:
+```
+
+**2. Choose a database password.** Open Food Facts also asks every app for a contact email, so put yours here:
+
+```bash
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
+echo "OFF_CONTACT_EMAIL=you@example.com" >> .env
+```
+
+**3. Start it:**
+
+```bash
+docker compose up -d
+```
+
+**4. Open <http://localhost:8080>** (or `http://<server>:8080` from another device) and add your first profile. The first start takes a few seconds while Tally sets up its database and loads the CoFID foods.
+
+To check it's running:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+```json
+{"ok":true,"version":"1.0.0"}
+```
+
+The camera and “Add to Home Screen” need HTTPS on phones, so see [Deploying](#deploying) before you hand it to the household.
+
+<details>
+<summary>Prefer <code>docker run</code>?</summary>
+
+```bash
+POSTGRES_PASSWORD=$(openssl rand -hex 24)
+
+docker network create tally
+
+docker run -d --name tally-db --network tally --restart unless-stopped \
+  -e POSTGRES_USER=tally \
+  -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  -e POSTGRES_DB=tally \
+  -v tally-db:/var/lib/postgresql \
+  postgres:18-alpine
+
+docker run -d --name tally-app --network tally --restart unless-stopped \
+  -p 8080:8080 \
+  -e "ConnectionStrings__Tally=Host=tally-db;Port=5432;Database=tally;Username=tally;Password=$POSTGRES_PASSWORD;Gss Encryption Mode=Disable" \
+  -e Tally__OpenFoodFacts__ContactEmail=you@example.com \
+  ghcr.io/joecrockett5/tally:latest
+```
+
+Tally retries its database connection on start, so it's fine that Postgres takes a moment to come up.
+
+</details>
+
+## Configuration
+
+Set these in the `.env` file next to `docker-compose.yml`, then run `docker compose up -d` again.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `POSTGRES_PASSWORD` | none, **required** | Database password. Use letters and digits only, because it also goes into the app's connection string. |
+| `POSTGRES_USER` | `tally` | Database user. |
+| `POSTGRES_DB` | `tally` | Database name. |
+| `VERSION` | `latest` | Image tag to run. See [Updating and versions](#updating-and-versions). |
+| `APP_PORT` | `8080` | HTTP port, inside and outside the container. |
+| `TALLY_TIMEZONE` | `Europe/London` | IANA timezone that decides which calendar day “today” is. Diary days are stored as local dates, so entries don't jump days at midnight or when the clocks change. |
+| `OFF_CONTACT_EMAIL` | empty | Sent to Open Food Facts in the User-Agent (`Tally/<version> (<email>)`), as they ask every app to do. |
+| `OFF_ENABLED` | `true` | `false` turns off all online lookups, leaving your own foods and CoFID. |
 | `OFF_PRODUCT_CACHE_DAYS` | `30` | Cached products are refreshed in the background after this many days. |
 | `OFF_NOT_FOUND_CACHE_HOURS` | `24` | How long a “barcode not found” answer is remembered. |
 | `OFF_SEARCH_CACHE_HOURS` | `24` | How long online search results are remembered. |
 
-## Putting it behind Nginx Proxy Manager
+<details>
+<summary>Variables on the app container</summary>
 
-Tally speaks plain HTTP; Nginx Proxy Manager (NPM) handles TLS.
+The compose file maps the settings above onto these. With `docker run`, set them directly. The ones marked “not in compose” need adding under `environment:` if you want to change them.
 
-1. In NPM, **Hosts → Proxy Hosts → Add Proxy Host**.
-2. **Domain name:** e.g. `tally.example.com`.
-3. **Scheme:** `http`. **Forward hostname / IP:** the Docker host's LAN IP (or the container name `tally-app-1` if NPM shares a Docker network with Tally). **Forward port:** your `APP_PORT` (8080).
-4. Tick **Block common exploits** and **Websockets support** (harmless, not required).
-5. **SSL tab:** request a Let's Encrypt certificate (or pick an existing one), tick **Force SSL** and **HTTP/2 support**.
+| Variable | Default | Meaning |
+|---|---|---|
+| `ConnectionStrings__Tally` | localhost development database | Npgsql connection string. Keep `Gss Encryption Mode=Disable`: the image has no Kerberos libraries. |
+| `ASPNETCORE_HTTP_PORTS` | `8080` | Port the app listens on inside the container. |
+| `TZ` | UTC | The container's system timezone. Compose sets it from `TALLY_TIMEZONE`. |
+| `Tally__TimeZone` | `Europe/London` | Same as `TALLY_TIMEZONE`. |
+| `Tally__OpenFoodFacts__Enabled` | `true` | Same as `OFF_ENABLED`. |
+| `Tally__OpenFoodFacts__ContactEmail` | empty | Same as `OFF_CONTACT_EMAIL`. |
+| `Tally__OpenFoodFacts__ProductCacheDays` | `30` | Same as `OFF_PRODUCT_CACHE_DAYS`. |
+| `Tally__OpenFoodFacts__NotFoundCacheHours` | `24` | Same as `OFF_NOT_FOUND_CACHE_HOURS`. |
+| `Tally__OpenFoodFacts__SearchCacheHours` | `24` | Same as `OFF_SEARCH_CACHE_HOURS`. |
+| `Tally__OpenFoodFacts__ProductRequestsPerMinute` | `15` | Not in compose. Rate limit for product reads, matching Open Food Facts' published limit. |
+| `Tally__OpenFoodFacts__SearchRequestsPerMinute` | `10` | Not in compose. Rate limit for searches, matching Open Food Facts' published limit. |
+| `Tally__OpenFoodFacts__TimeoutSeconds` | `8` | Not in compose. Timeout for each Open Food Facts request. |
+| `Tally__OpenFoodFacts__ProductBaseUrl` | `https://world.openfoodfacts.org` | Not in compose. Open Food Facts product API address. |
+| `Tally__OpenFoodFacts__SearchBaseUrl` | `https://search.openfoodfacts.org` | Not in compose. Open Food Facts search API address. |
+| `Tally__SeedCofid` | `true` | Not in compose. Load CoFID on start when no generic foods exist yet. |
+| `Tally__CofidPath` | `data/cofid/cofid-2021.csv` | Not in compose. Path of the CoFID file, relative to the app or absolute. |
+| `APP_VERSION` | set by the image | The version reported by `/healthz`. Set when the image is built; `dev` outside an image. |
 
-Tally reads `X-Forwarded-For`/`X-Forwarded-Proto` from the proxy and does not add its own HTTPS redirect or HSTS — NPM is responsible for that. Because the forwarded headers are trusted from any address, **don't expose port 8080 directly to the internet**; only NPM should reach it (firewall the port or bind it to the LAN).
+</details>
 
-Optional hardening: NPM's **Access List** feature can add HTTP basic auth or IP allow-listing in front of Tally if you want a gate before the profile picker.
+## Updating and versions
 
-### Why HTTPS is required for barcode scanning
+Images are published to `ghcr.io/joecrockett5/tally` for `linux/amd64` and `linux/arm64`. Choose how closely to follow releases with `VERSION` in `.env`:
 
-Browsers only allow camera access on a **secure context**: HTTPS, or `http://localhost` on the device itself. Opening Tally at `http://192.168.x.x:8080` on a phone works for everything except the camera — the scanner will explain that and offer manual barcode entry instead. Use your NPM `https://` address on phones. Installing Tally as an app (“Add to Home Screen”) also needs HTTPS.
+| Tag | Follows |
+|---|---|
+| `latest` | The newest stable release. This is the default. |
+| `1` | The newest stable `1.x.y`. |
+| `1.0` | The newest stable `1.0.y`, so bug fixes only. |
+| `1.0.0` | Exactly that release, and never changes. |
 
-Scanning uses the browser's built-in `BarcodeDetector` where available (Chrome on Android) and falls back to a JavaScript decoder (ZXing) on iPhone/Safari. EAN-13, EAN-8, UPC-A and UPC-E are supported.
+Pre-releases such as `1.1.0-rc.1` are only published under their exact tag.
 
-## Installing on a phone
+To update:
 
-- **Android (Chrome):** open the HTTPS address, then menu → **Install app** / **Add to Home screen**.
-- **iPhone (Safari):** Share → **Add to Home Screen**.
+```bash
+docker compose pull && docker compose up -d
+```
 
-The app shell is cached so it opens instantly, but diary data always comes from your server — there's no offline logging. If the phone is offline, Tally says so.
+Database migrations run automatically on start and can't be undone automatically, so [take a backup](#backup) first. Installed phone apps pick up the new version the next time they're opened. What changed in each release is in the [changelog](CHANGELOG.md).
 
-## Backups
+## Your data
 
-All data lives in the `tally-db` Docker volume (Postgres). Back it up with `pg_dump`, which is consistent while Tally is running:
+The app container is stateless. Everything you enter lives in Postgres, in one named Docker volume:
+
+| Volume | Mounted at | Holds |
+|---|---|---|
+| `tally_tally-db` (just `tally-db` if you used `docker run`) | `/var/lib/postgresql` in the `db` container | Profiles, diary, foods, recipes, goals and cached Open Food Facts products. |
+
+The only thing kept outside it is each browser's remembered profile choice.
+
+### Backup
+
+`pg_dump` is consistent while Tally is running:
 
 ```bash
 docker compose exec -T db pg_dump -U tally -d tally -Fc > tally-$(date +%F).dump
 ```
 
-(Replace `tally` with your `POSTGRES_USER`/`POSTGRES_DB` if you changed them.) Schedule that with cron and copy the files somewhere off the server.
+Replace `tally` if you changed `POSTGRES_USER` or `POSTGRES_DB`. Schedule that with cron and copy the files off the server.
 
 ### Restore
 
 ```bash
 docker compose stop app
-docker compose exec -T db pg_restore -U tally -d tally --clean --if-exists < tally-2026-10-18.dump
+docker compose exec -T db pg_restore -U tally -d tally --clean --if-exists < tally-2026-11-06.dump
 docker compose start app
 ```
 
-To restore onto a fresh machine: `docker compose up -d db`, wait for it to be healthy, run the `pg_restore` line, then `docker compose up -d`.
+To restore onto a fresh machine, run `docker compose up -d db`, wait for it to be healthy, run the `pg_restore` line, then `docker compose up -d`.
 
-Alternatively, stop everything and archive the raw volume (must be stopped for consistency):
+### Refreshing CoFID
 
-```bash
-docker compose down
-docker run --rm -v tally_tally-db:/data -v "$PWD":/backup alpine tar czf /backup/tally-db.tgz -C /data .
-docker compose up -d
-```
-
-## Updating
-
-```bash
-git pull
-docker compose up -d --build
-```
-
-Database migrations run automatically on start. Take a backup first. Installed phone apps pick up the new version the next time they're opened (the service worker updates itself).
-
-To refresh CoFID data after the converted file changes:
+This reloads the bundled CoFID foods into your database:
 
 ```bash
 docker compose exec app dotnet Tally.Api.dll import-cofid
 ```
 
-## Data sources and licences
+## Deploying
 
-- **CoFID** — *McCance and Widdowson's Composition of Foods Integrated Dataset 2021*, Office for Health Improvement and Disparities, © Crown copyright, [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Converted from the published spreadsheet by `tools/cofid/convert.py` into `data/cofid/cofid-2021.csv` (see that script for the conventions: trace → 0, not measured → unknown, salt from sodium, AOAC fibre with NSP fallback).
-- **Open Food Facts** — product data © Open Food Facts contributors, [Open Database Licence](https://opendatacommons.org/licenses/odbl/1-0/). Tally uses the product API (v3) and Search-a-licious, respects the published rate limits (15 product reads and 10 searches per minute), and caches results in your database. Attribution is shown wherever OFF data appears.
+Tally speaks plain HTTP, so put a reverse proxy in front of it for HTTPS. Tally reads `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, and doesn't add its own HTTPS redirect or HSTS.
 
-## Custom foods, restaurants and imports
+> [!WARNING]
+> Tally has no login, and it trusts forwarded headers from any address. **Don't expose its port directly to the internet.** Only your proxy should reach it: firewall the port, or publish it on localhost only by changing the compose `ports:` line to `"127.0.0.1:8080:8080"`. To put a gate in front of the profile picker, add basic auth or an IP allow-list at the proxy.
 
-Anyone can add foods (per 100 g, per 100 ml, or per portion for restaurant dishes), optionally under a restaurant such as “Nando's”. Foods are private unless **Share with everyone** is ticked; only the creator can edit or unshare a shared food, and others can **Copy to my foods** to make their own editable version. Restaurant menus and lists of foods can be imported from CSV or JSON with a validated preview — see [docs/IMPORT.md](docs/IMPORT.md) and the files in [`examples/`](examples/).
+**Upload size:** bulk imports go through the proxy, and Tally accepts request bodies of up to 5 MB. nginx's default limit is 1 MB, so raise it as shown. Caddy has no limit by default.
 
-Diary entries keep the nutrition values from the moment they were logged, so editing a food (or Open Food Facts updating a product) never changes your history.
+### Caddy
+
+Caddy gets a certificate automatically and sets the forwarded headers for you:
+
+```caddyfile
+tally.example.com {
+	reverse_proxy localhost:8080
+}
+```
+
+### nginx
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name tally.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/tally.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tally.example.com/privkey.pem;
+
+    client_max_body_size 5m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}
+```
+
+### Nginx Proxy Manager
+
+Add a proxy host with scheme `http`, your Docker host's address and port `8080`. On the SSL tab, request a certificate and tick **Force SSL**. To allow imports over 1 MB, add `client_max_body_size 5m;` on the Advanced tab.
+
+### Phones
+
+Browsers only allow the camera on HTTPS, or on `http://localhost` on the device itself. Over plain HTTP on a LAN address, everything works except the camera: the scanner explains why and offers manual barcode entry. Scanning uses the browser's `BarcodeDetector` where it's available and falls back to ZXing, for example on iPhone.
+
+To install the app, open your HTTPS address, then:
+
+- **Android (Chrome):** menu → **Install app** or **Add to Home screen**.
+- **iPhone (Safari):** Share → **Add to Home Screen**.
 
 ## Development
 
-Prerequisites: .NET 10 SDK, Node 24, Docker (for Postgres and the tests).
+Stack: ASP.NET Core (.NET 10) with EF Core, PostgreSQL 18, and React with TypeScript and Vite. The design notes are in [PLAN.md](PLAN.md) and [ASSUMPTIONS.md](ASSUMPTIONS.md).
+
+### Running from source
+
+You need the .NET 10 SDK, Node 24 and Docker.
 
 ```bash
 # database
@@ -149,11 +353,45 @@ cd web && npm run typecheck
 
 New migration: `dotnet tool restore && dotnet ef migrations add <Name> -p src/Tally.Api -o Data/Migrations`.
 
-Project docs: [PLAN.md](PLAN.md) (architecture, data model, API), [ASSUMPTIONS.md](ASSUMPTIONS.md) (decisions), [PROGRESS.md](PROGRESS.md) (status and known limitations).
+### Building the image from your checkout
 
-## Troubleshooting
+`docker-compose.build.yml` swaps the published image for a local build:
 
-- **App container unhealthy:** `docker compose logs app`. Most often the database password in `.env` changed after the volume was created — Postgres keeps the original password.
-- **“Online results unavailable”:** Open Food Facts is slow, down, or Tally is backing off after errors/rate limits. Local, CoFID and previously cached products keep working; try again in a minute.
-- **Scanner says HTTPS is needed:** open Tally through your NPM `https://` address.
-- **Wrong “today”:** set `TALLY_TIMEZONE` and restart.
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+```
+
+### CI
+
+- **Pull requests** run the backend and frontend tests. They also fail if the manifest versions disagree, or if `CHANGELOG.md` has no section for the current version.
+- **Pushes to `main`** run the same checks, then look for the tag `vX.Y.Z`. If it's missing, they [publish a release](.github/workflows/release.yml). If it exists, they just build and smoke-test the image.
+
+### Releasing
+
+Releases happen automatically when a merge to `main` carries a new version. **Never push tags by hand.**
+
+1. Set the version in every manifest:
+
+   ```bash
+   tools/release/set-version.sh X.Y.Z
+   ```
+
+2. In `CHANGELOG.md`, add a `## [X.Y.Z] - YYYY-MM-DD` section and update the link definitions at the bottom.
+3. Open a pull request and merge it.
+
+CI then builds and pushes the multi-arch image, smoke-tests it, and creates the tag and GitHub Release using the changelog section as the notes. A version containing `-`, such as `1.1.0-rc.1`, becomes a pre-release and doesn't move `latest`, `1` or `1.1`.
+
+### Refreshing the README media
+
+```bash
+node tools/media/seed-demo.mjs http://localhost:8080
+```
+
+Run that against a fresh instance with `OFF_ENABLED=false`, then follow the steps at the top of [`tools/media/capture.cjs`](tools/media/capture.cjs) to retake the screenshots and GIF.
+
+## License and credits
+
+Tally is released under the [MIT License](LICENSE). Bundled and runtime dependencies are listed with their licences in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+- **CoFID:** *McCance and Widdowson's Composition of Foods Integrated Dataset 2021*, Office for Health Improvement and Disparities, © Crown copyright, [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Converted from the published spreadsheet by [`tools/cofid/convert.py`](tools/cofid/convert.py), which documents the conventions: trace → 0, not measured → unknown, salt from sodium, AOAC fibre with NSP fallback.
+- **Open Food Facts:** product data © Open Food Facts contributors, [Open Database Licence](https://opendatacommons.org/licenses/odbl/1-0/). Tally uses the product API (v3) and Search-a-licious, respects the published rate limits, caches results in your database, and shows attribution wherever this data appears.
