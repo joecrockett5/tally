@@ -10,3 +10,4 @@ web/dev-dist/
 .DS_Store
 TestResults/
 coverage/
+__pycache__/
