@@ -1,0 +1,95 @@
+name: Release
+
+# Called by ci.yml when a push to main carries a version with no tag yet. This is
+# the only release path: it creates the tag itself, and tags created with
+# GITHUB_TOKEN don't start other workflows.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to release, without the leading v (e.g. 1.2.3 or 1.2.3-rc.1)
+        required: true
+        type: string
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  publish:
+    name: Publish image and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # value= is needed because the git tag doesn't exist yet. Pre-releases only
+      # get {{version}}: metadata-action skips the other semver patterns for them.
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}},value=v${{ inputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ inputs.version }}
+            type=semver,pattern={{major}},value=v${{ inputs.version }}
+            type=raw,value=latest,enable=${{ !contains(inputs.version, '-') }}
+          # These replace the values metadata-action would take from the repo's About settings.
+          labels: |
+            org.opencontainers.image.title=Tally
+            org.opencontainers.image.description=Self-hosted food diary and nutrition tracker for the UK
+            org.opencontainers.image.licenses=MIT
+          annotations: |
+            org.opencontainers.image.title=Tally
+            org.opencontainers.image.description=Self-hosted food diary and nutrition tracker for the UK
+            org.opencontainers.image.licenses=MIT
+        env:
+          # ghcr.io shows a multi-arch image's description from its index annotations.
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          build-args: APP_VERSION=${{ inputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test the pushed image
+        run: tools/release/smoke-test.sh "$IMAGE:$VERSION" "$VERSION"
+
+      - name: Write release notes
+        run: |
+          {
+            tools/release/changelog-notes.sh "$VERSION"
+            cat <<NOTES
+
+          ## Docker image
+
+          \`\`\`bash
+          docker pull $IMAGE:$VERSION
+          \`\`\`
+          NOTES
+          } > notes.md
+
+      # Creates the tag and the release in one step.
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=()
+          if [[ "$VERSION" == *-* ]]; then args+=(--prerelease); fi
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md "${args[@]}"
