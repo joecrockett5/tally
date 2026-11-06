@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Superseded PR runs are cancelled. Runs on main are never cancelled, so a new
+# push can't kill a release halfway through; they queue instead.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      # Testcontainers starts Postgres using the runner's Docker daemon.
+      - run: dotnet test
+
+  test-web:
+    name: Test web app
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-fund --no-audit
+      - run: npm run typecheck
+      - run: npm test
+
+  version-check:
+    name: Check version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.tag.outputs.released }}
+    steps:
+      - uses: actions/checkout@v7
+      # Fails if the manifests disagree or CHANGELOG.md has no section for this version.
+      - id: version
+        run: echo "version=$(tools/release/check-version.sh)" >> "$GITHUB_OUTPUT"
+      - id: tag
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [[ -n "$(git ls-remote --tags origin "refs/tags/v$VERSION")" ]]; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is already released: building and smoke-testing only."
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION has not been released: releasing."
+          fi
+
+  release:
+    name: Release
+    needs: [test-api, test-web, version-check]
+    if: github.event_name == 'push' && needs.version-check.outputs.released == 'false'
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.version-check.outputs.version }}
+
+  smoke-test:
+    name: Build and smoke-test image
+    needs: [test-api, test-web, version-check]
+    if: github.event_name == 'push' && needs.version-check.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: tally:smoke
+          build-args: APP_VERSION=${{ needs.version-check.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - env:
+          VERSION: ${{ needs.version-check.outputs.version }}
+        run: tools/release/smoke-test.sh tally:smoke "$VERSION"

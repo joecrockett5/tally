@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -74,7 +75,7 @@ var staticFiles = StaticCaching.Options();
 app.UseDefaultFiles();
 app.UseStaticFiles(staticFiles);
 
-app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz", new HealthCheckOptions { ResponseWriter = HealthResponse.WriteAsync });
 
 var api = app.MapGroup("/api");
 api.MapGet("/config", (IOptions<TallyOptions> o, Clock clock) =>
