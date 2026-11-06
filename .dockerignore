@@ -4,6 +4,10 @@
 web/dist
 web/dev-dist
 tests
+docs
+examples
+tools
 .git
+.github
 .env
 *.md

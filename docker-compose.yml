@@ -1,3 +1,6 @@
+# Runs the published image. All settings have defaults except POSTGRES_PASSWORD;
+# set them in a .env file next to this one (see .env.example).
+# To build this checkout instead, see docker-compose.build.yml.
 name: tally
 
 services:
@@ -6,11 +9,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tally}
+      # Required. Use letters and digits only: it is also embedded in the app's connection string.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-tally}
       TZ: ${TALLY_TIMEZONE:-Europe/London}
     volumes:
-      # Postgres 18 images keep PGDATA under /var/lib/postgresql/<major>/docker
+      # All of Tally's data. Postgres 18 keeps PGDATA under /var/lib/postgresql/<major>/docker.
       - tally-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -20,30 +24,29 @@ services:
       start_period: 20s
 
   app:
-    build: .
-    image: tally:latest
+    # VERSION: an image tag such as 1.0.0, 1.0 or 1. Defaults to the latest stable release.
+    image: ghcr.io/joecrockett5/tally:${VERSION:-latest}
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     ports:
+      # APP_PORT: the HTTP port, inside and outside the container.
       - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     environment:
       ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
+      # TALLY_TIMEZONE: IANA timezone that decides which calendar day "today" is.
       TZ: ${TALLY_TIMEZONE:-Europe/London}
-      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable"
       Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
+      ConnectionStrings__Tally: "Host=db;Port=5432;Database=${POSTGRES_DB:-tally};Username=${POSTGRES_USER:-tally};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable"
+      # OFF_ENABLED: false turns off all online Open Food Facts lookups.
       Tally__OpenFoodFacts__Enabled: ${OFF_ENABLED:-true}
+      # OFF_CONTACT_EMAIL: sent to Open Food Facts in the User-Agent, as they ask every app to do.
       Tally__OpenFoodFacts__ContactEmail: ${OFF_CONTACT_EMAIL:-}
+      # Cache lifetimes: products refresh after N days; missing barcodes and searches are remembered for N hours.
       Tally__OpenFoodFacts__ProductCacheDays: ${OFF_PRODUCT_CACHE_DAYS:-30}
       Tally__OpenFoodFacts__NotFoundCacheHours: ${OFF_NOT_FOUND_CACHE_HOURS:-24}
       Tally__OpenFoodFacts__SearchCacheHours: ${OFF_SEARCH_CACHE_HOURS:-24}
-    healthcheck:
-      test: ["CMD", "dotnet", "Tally.Api.dll", "healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 volumes:
   tally-db:
