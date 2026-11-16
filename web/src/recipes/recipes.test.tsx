@@ -3,10 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Recipe } from '../api/types';
-import { emptyDay, entry, MEAL, mealLayout, nutrients } from '../test/fixtures';
+import { emptyDay, entry, food, MEAL, mealLayout, nutrients } from '../test/fixtures';
 import { mockFetch } from '../test/mockFetch';
 import { renderWithProfile, testProfile } from '../test/renderWithProfile';
 import { DiaryPage } from '../diary/DiaryPage';
+import { FoodPickerSheet } from './FoodPickerSheet';
 import { LogRecipeSheet } from './LogRecipeSheet';
 import { sumNutrients } from './RecipeFormPage';
 
@@ -29,6 +30,53 @@ describe('sumNutrients', () => {
     expect(sum.energyKcal).toBe(150);
     expect(sum.fat).toBe(2);
     expect(sum.protein).toBeNull();
+  });
+});
+
+describe('FoodPickerSheet', () => {
+  const oats = food({ id: 'oats', name: 'Porridge oats', nutrients: nutrients({ energyKcal: 370 }) });
+
+  it('offers recent foods with the amount last used', async () => {
+    mockFetch([
+      { path: '/api/foods/recent', body: [{ food: oats, unit: 'Gram', quantity: 50, servingId: null, timesLogged: 3 }] },
+      { path: '/api/foods/frequent', body: [] },
+    ]);
+    const onPick = vi.fn();
+    render(<FoodPickerSheet title="Add ingredient" onClose={() => {}} onPick={onPick} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Porridge oats/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Add · 185 kcal/ }));
+    expect(onPick).toHaveBeenCalledWith(oats, { unit: 'Gram', quantity: 50, servingId: null });
+  });
+
+  it('finds an ingredient by barcode', async () => {
+    vi.stubGlobal('isSecureContext', false);
+    const fetch = mockFetch([
+      { path: '/api/foods/recent', body: [] },
+      { path: '/api/foods/barcode/5000159620164', body: { status: 'found', barcode: '5000159620164', food: oats, message: null } },
+    ]);
+    render(<FoodPickerSheet title="Add ingredient" onClose={() => {}} onPick={() => {}} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scan barcode' }));
+    await userEvent.type(screen.getByLabelText('Or enter the barcode'), '5000159620164');
+    await userEvent.click(screen.getByRole('button', { name: 'Look up' }));
+
+    expect(await screen.findByRole('heading', { name: 'Porridge oats' })).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => url === '/api/foods/barcode/5000159620164')).toBe(true);
+  });
+
+  it('says so when a scanned barcode is unknown', async () => {
+    vi.stubGlobal('isSecureContext', false);
+    mockFetch([
+      { path: '/api/foods/recent', body: [] },
+      { path: '/api/foods/barcode/12345678', body: { status: 'not_found', barcode: '12345678', food: null, message: null } },
+    ]);
+    render(<FoodPickerSheet title="Add ingredient" onClose={() => {}} onPick={() => {}} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scan barcode' }));
+    await userEvent.type(screen.getByLabelText('Or enter the barcode'), '12345678');
+    await userEvent.click(screen.getByRole('button', { name: 'Look up' }));
+    expect(await screen.findByText(/Barcode 12345678 wasn't found/)).toBeInTheDocument();
   });
 });
 

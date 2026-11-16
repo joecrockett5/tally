@@ -484,6 +484,18 @@ ul {
     border-radius: 16px;
   }
 }
+.sheet-tall {
+  height: 92dvh;
+}
+@media (min-width: 640px) {
+  .sheet-tall {
+    height: min(640px, 92dvh);
+  }
+}
+.picker-search {
+  display: flex;
+  gap: 8px;
+}
 @keyframes sheet-up {
   from {
     transform: translateY(24px);
