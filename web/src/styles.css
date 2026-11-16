@@ -986,6 +986,24 @@ code {
   overflow-wrap: anywhere;
 }
 
+/* ---- Meals ------------------------------------------------------------- */
+.meal-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.meal-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.meal-edit-row .input {
+  min-width: 0;
+}
+
 /* ---- Goals ------------------------------------------------------------- */
 .goal-list {
   display: flex;

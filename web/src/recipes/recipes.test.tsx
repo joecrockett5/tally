@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Recipe } from '../api/types';
-import { emptyDay, entry, nutrients } from '../test/fixtures';
+import { emptyDay, entry, MEAL, mealLayout, nutrients } from '../test/fixtures';
 import { mockFetch } from '../test/mockFetch';
 import { renderWithProfile, testProfile } from '../test/renderWithProfile';
 import { DiaryPage } from '../diary/DiaryPage';
@@ -34,16 +34,20 @@ describe('sumNutrients', () => {
 
 describe('LogRecipeSheet', () => {
   it('logs servings by default and grams when a cooked weight exists', async () => {
-    const fetch = mockFetch([{ method: 'POST', path: '/api/diary/entries', status: 201, body: { id: 'e1', date: '2026-10-18' } }]);
-    render(<LogRecipeSheet recipe={chilli} date="2026-10-18" meal="Dinner" onClose={() => {}} onLogged={() => {}} />);
+    const fetch = mockFetch([
+      { path: '/api/meals', body: mealLayout('2026-10-18') },
+      { method: 'POST', path: '/api/diary/entries', status: 201, body: { id: 'e1', date: '2026-10-18' } },
+    ]);
+    render(<LogRecipeSheet recipe={chilli} date="2026-10-18" mealId={MEAL.Dinner} onClose={() => {}} onLogged={() => {}} />);
 
     expect(screen.getByRole('button', { name: /140 kcal/ })).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Unit' }), 'g');
     expect(screen.getByLabelText('Amount')).toHaveValue(300); // one serving's worth
-    await userEvent.click(screen.getByRole('button', { name: /Add to Dinner · 140 kcal/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Add to Dinner · 140 kcal/ }));
 
-    const body = JSON.parse(fetch.mock.calls[0][1]!.body as string);
-    expect(body).toEqual({ date: '2026-10-18', meal: 'Dinner', recipeId: 'r1', unit: 'Gram', quantity: 300 });
+    const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST')!;
+    const body = JSON.parse(post[1]!.body as string);
+    expect(body).toEqual({ date: '2026-10-18', mealId: MEAL.Dinner, recipeId: 'r1', unit: 'Gram', quantity: 300 });
   });
 });
 
@@ -51,7 +55,7 @@ describe('Save as meal', () => {
   it('saves a diary meal under a name', async () => {
     const fetch = mockFetch([
       { path: '/api/profiles/p1', body: testProfile },
-      { path: '/api/diary/2026-10-17', body: emptyDay('2026-10-17', [entry({ meal: 'Breakfast' })]) },
+      { path: '/api/diary/2026-10-17', body: emptyDay('2026-10-17', [entry({ mealId: MEAL.Breakfast })]) },
       { method: 'POST', path: '/api/saved-meals/from-diary', status: 201, body: { id: 'm1' } },
     ]);
     renderWithProfile('/diary/2026-10-17', <Route path="/diary/:date?" element={<DiaryPage />} />);
@@ -62,7 +66,7 @@ describe('Save as meal', () => {
 
     expect(await screen.findByText(/Saved “Usual breakfast”/)).toBeInTheDocument();
     const post = fetch.mock.calls.find(([url]) => url === '/api/saved-meals/from-diary')!;
-    expect(JSON.parse(post[1]!.body as string)).toEqual({ name: 'Usual breakfast', date: '2026-10-17', meal: 'Breakfast' });
+    expect(JSON.parse(post[1]!.body as string)).toEqual({ name: 'Usual breakfast', date: '2026-10-17', mealId: MEAL.Breakfast });
   });
 
   it('is not offered for an empty meal', async () => {

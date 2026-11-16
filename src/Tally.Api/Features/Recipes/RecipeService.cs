@@ -49,7 +49,7 @@ public sealed class RecipeService(TallyDbContext db)
     /// Snapshots a recipe for the diary: per serving (logged in portions), or per
     /// 100 g of cooked weight when logged by grams.
     /// </summary>
-    public static DiaryEntry? Snapshot(Recipe r, Guid profileId, DateOnly date, Meal meal, QuantityUnit? unit, double quantity, out string? error)
+    public static DiaryEntry? Snapshot(Recipe r, Guid profileId, DateOnly date, Guid mealId, QuantityUnit? unit, double quantity, out string? error)
     {
         var byGrams = unit == QuantityUnit.Gram;
         if (byGrams && r.CookedWeightGrams is not > 0)
@@ -65,7 +65,7 @@ public sealed class RecipeService(TallyDbContext db)
         {
             ProfileId = profileId,
             Date = date,
-            Meal = meal,
+            MealId = mealId,
             RecipeId = r.Id,
             Name = r.Name,
             SourceLabel = RecipeLabel,

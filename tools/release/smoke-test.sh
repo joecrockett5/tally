@@ -21,7 +21,7 @@ trap cleanup EXIT
 docker network create "$id" >/dev/null
 docker run -d --name "$id-db" --network "$id" \
   -e POSTGRES_USER=tally -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=tally postgres:18-alpine >/dev/null
-docker run -d --name "$id-app" --network "$id" -p 127.0.0.1::8080 \
+docker run -d --name "$id-app" --network "$id" -p 127.0.0.1::8080 -p 127.0.0.1::8443 \
   -e "ConnectionStrings__Tally=Host=$id-db;Port=5432;Database=tally;Username=tally;Password=smoke;Gss Encryption Mode=Disable" \
   -e Tally__OpenFoodFacts__Enabled=false "$image" >/dev/null
 
@@ -41,6 +41,11 @@ echo "Image healthcheck: passed"
 
 curl -fsS "$url/" | grep -q '<div id="root">' || { echo "SPA not served at /" >&2; exit 1; }
 echo "SPA: served"
+
+# -k: the certificate is the self-signed one the app has just made for itself.
+https="https://$(docker port "$id-app" 8443/tcp | head -n 1)"
+[[ "$(curl -fsSk "$https/healthz")" == "$want" ]] || { echo "HTTPS: no answer at $https" >&2; exit 1; }
+echo "HTTPS: served with a self-signed certificate"
 
 profile=$(curl -fsS -X POST "$url/api/profiles" -H 'Content-Type: application/json' -d '{"name":"Smoke"}' | jq -r .id)
 foods=$(curl -fsS "$url/api/foods/search?q=chicken" -H "X-Profile-Id: $profile" | jq length)

@@ -52,10 +52,8 @@ namespace Tally.Api.Data.Migrations
                     b.Property<Guid?>("FoodId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Meal")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)");
+                    b.Property<Guid>("MealId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -344,6 +342,34 @@ namespace Tally.Api.Data.Migrations
                     b.ToTable("Goals");
                 });
 
+            modelBuilder.Entity("Tally.Api.Data.MealPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.PrimitiveCollection<Guid[]>("MealIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.PrimitiveCollection<string[]>("MealNames")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("MealPlans");
+                });
+
             modelBuilder.Entity("Tally.Api.Data.OffBarcodeMiss", b =>
                 {
                     b.Property<string>("Barcode")
@@ -626,6 +652,15 @@ namespace Tally.Api.Data.Migrations
                     b.HasOne("Tally.Api.Data.Profile", null)
                         .WithOne()
                         .HasForeignKey("Tally.Api.Data.Goal", "ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Tally.Api.Data.MealPlan", b =>
+                {
+                    b.HasOne("Tally.Api.Data.Profile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

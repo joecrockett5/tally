@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client';
-import { MEALS, type BarcodeLookup, type Food, type Meal, type QuickPick, type Recipe, type RecipeSummary, type SavedMeal } from '../api/types';
+import type { BarcodeLookup, Food, QuickPick, Recipe, RecipeSummary, SavedMeal } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { FoodRow } from '../components/FoodRow';
 import { FoodSearchResults } from '../components/FoodSearchResults';
@@ -9,6 +9,7 @@ import type { QuantityChoice } from '../components/QuantityPicker';
 import { describeQuantity, formatNutrient } from '../lib/nutrients';
 import { useApi } from '../lib/useApi';
 import { useFoodSearch } from '../lib/useFoodSearch';
+import { useMeals } from '../lib/useMeals';
 import { LogRecipeSheet } from '../recipes/LogRecipeSheet';
 import { LogFoodSheet } from './LogFoodSheet';
 import { Scanner, type ScanResult } from './Scanner';
@@ -23,8 +24,9 @@ const TABS: [QuickTab, string][] = [
 ];
 
 export function AddFoodPage() {
-  const { date = '', meal: mealParam } = useParams();
-  const meal = (MEALS.find((m) => m.toLowerCase() === mealParam?.toLowerCase()) ?? 'Snacks') as Meal;
+  const { date = '', mealId } = useParams();
+  const layout = useMeals(date);
+  const meal = layout.meals?.find((m) => m.id === mealId) ?? layout.meals?.[0];
   const navigate = useNavigate();
 
   const [q, setQ] = useState('');
@@ -76,7 +78,7 @@ export function AddFoodPage() {
 
   const logSavedMeal = async (m: SavedMeal) => {
     try {
-      await api.post(`/api/saved-meals/${m.id}/log`, { date, meal });
+      await api.post(`/api/saved-meals/${m.id}/log`, { date, mealId: meal?.id });
       backToDiary();
     } catch (err) {
       setError(err as Error);
@@ -86,7 +88,7 @@ export function AddFoodPage() {
   return (
     <div className="stack">
       <div className="page-header">
-        <h1>Add to {meal}</h1>
+        <h1>Add to {meal?.name ?? '…'}</h1>
         <Link className="button button-ghost button-small" to={`/diary/${date}`}>
           Done
         </Link>
@@ -107,7 +109,7 @@ export function AddFoodPage() {
         </button>
       </div>
 
-      <ErrorNote error={error} />
+      <ErrorNote error={error ?? layout.error} />
       {scanOutcome && (
         <div className="card stack" role="status">
           <p>
@@ -208,9 +210,9 @@ export function AddFoodPage() {
 
       {scanning && <Scanner onDetected={onScan} onClose={() => setScanning(false)} />}
       {selected && (
-        <LogFoodSheet food={selected.food} initial={selected.initial} date={date} meal={meal} onClose={() => setSelected(null)} onLogged={backToDiary} />
+        <LogFoodSheet food={selected.food} initial={selected.initial} date={date} mealId={meal?.id} onClose={() => setSelected(null)} onLogged={backToDiary} />
       )}
-      {recipe && <LogRecipeSheet recipe={recipe} date={date} meal={meal} onClose={() => setRecipe(null)} onLogged={backToDiary} />}
+      {recipe && <LogRecipeSheet recipe={recipe} date={date} mealId={meal?.id} onClose={() => setRecipe(null)} onLogged={backToDiary} />}
     </div>
   );
 }

@@ -2,15 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace Tally.Api.Data;
 
-[JsonConverter(typeof(JsonStringEnumConverter<Meal>))]
-public enum Meal
-{
-    Breakfast,
-    Lunch,
-    Dinner,
-    Snacks,
-}
-
 /// <summary>How the quantity was entered.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<QuantityUnit>))]
 public enum QuantityUnit
@@ -32,7 +23,8 @@ public sealed class DiaryEntry
 
     /// <summary>Local calendar day in the configured timezone.</summary>
     public DateOnly Date { get; set; }
-    public Meal Meal { get; set; }
+    /// <summary>A slot in the profile's meal layout (see <see cref="MealPlan"/>).</summary>
+    public Guid MealId { get; set; }
 
     public Guid? FoodId { get; set; }
     public Guid? RecipeId { get; set; }

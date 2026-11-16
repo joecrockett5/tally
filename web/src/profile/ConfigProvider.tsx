@@ -4,7 +4,7 @@ import type { AppConfig } from '../api/types';
 import { todayIn } from '../lib/dates';
 import { useApi } from '../lib/useApi';
 
-const fallback: AppConfig = { version: '', timeZone: 'Europe/London', today: '', onlineEnabled: true };
+const fallback: AppConfig = { version: '', timeZone: 'Europe/London', today: '', onlineEnabled: true, httpsPort: null };
 
 const ConfigContext = createContext<AppConfig>(fallback);
 

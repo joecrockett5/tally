@@ -20,8 +20,8 @@ public sealed class HistoryTests(TallyApiFactory factory)
         var (client, _) = await factory.CreateProfileClientAsync();
         var food = await Food(client, "Test meal", new Nutrients { EnergyKcal = 100, Protein = 10, Carbohydrate = 10, Fat = 4, Salt = 0.1 });
         // Mon 05/10/2026: 2000 kcal (on target); Wed: 1000 kcal (under); other days empty.
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-05", Meal.Lunch, food.Id, null, QuantityUnit.Gram, 2000, null), Ct);
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-07", Meal.Lunch, food.Id, null, QuantityUnit.Gram, 1000, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-05", DefaultMeals.Lunch, food.Id, null, QuantityUnit.Gram, 2000, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-07", DefaultMeals.Lunch, food.Id, null, QuantityUnit.Gram, 1000, null), Ct);
 
         var h = await (await client.GetAsync("/api/history?from=2026-10-05&to=2026-10-11", Ct)).ReadAsync<HistoryDto>();
 
@@ -53,9 +53,9 @@ public sealed class HistoryTests(TallyApiFactory factory)
     {
         var (client, _) = await factory.CreateProfileClientAsync();
         var food = await Food(client, "Mystery, item", new Nutrients { EnergyKcal = 250 });
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-01", Meal.Breakfast, food.Id, null, QuantityUnit.Gram, 50, null), Ct);
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-03", Meal.Snacks, food.Id, null, QuantityUnit.Gram, 20, null), Ct);
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-11-01", Meal.Snacks, food.Id, null, QuantityUnit.Gram, 20, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-01", DefaultMeals.Breakfast, food.Id, null, QuantityUnit.Gram, 50, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-10-03", DefaultMeals.Snacks, food.Id, null, QuantityUnit.Gram, 20, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-11-01", DefaultMeals.Snacks, food.Id, null, QuantityUnit.Gram, 20, null), Ct);
 
         var response = await client.GetAsync("/api/export/diary.csv?from=2026-10-01&to=2026-10-31", Ct);
         Assert.Equal("text/csv", response.Content.Headers.ContentType!.MediaType);

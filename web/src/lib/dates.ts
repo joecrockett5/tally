@@ -71,7 +71,7 @@ export function formatMonth(iso: string): string {
   return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(toUtcDate(iso));
 }
 
-/** A sensible default meal for "now". */
+/** The built-in meal that usually fits the time of day; see `defaultMeal` for custom layouts. */
 export function mealForHour(hour: number): 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' {
   if (hour >= 5 && hour < 11) return 'Breakfast';
   if (hour >= 11 && hour < 15) return 'Lunch';

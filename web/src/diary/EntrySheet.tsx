@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { api } from '../api/client';
-import { MEALS, type Entry, type Meal, type QuantityUnit } from '../api/types';
+import type { Entry, MealSlot, QuantityUnit } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
+import { MealSelect } from '../components/MealSelect';
 import { NutritionTable } from '../components/NutritionTable';
 import { Sheet } from '../components/Sheet';
 import { SourceBadge } from '../components/SourceBadge';
@@ -9,16 +10,18 @@ import { formatNutrient, nutrientsForAmount } from '../lib/nutrients';
 
 interface Props {
   entry: Entry;
+  /** The meals this entry can be in: the day's own, plus the one it is in now if that has been removed. */
+  meals: MealSlot[];
   onClose: () => void;
   onChanged: () => void;
 }
 
 /** Edit an entry's quantity or meal. Values come from the entry's own snapshot. */
-export function EntrySheet({ entry, onClose, onChanged }: Props) {
+export function EntrySheet({ entry, meals, onClose, onChanged }: Props) {
   const baseUnit: QuantityUnit = entry.basis === 'PerPortion' ? 'Portion' : entry.basis === 'Per100ml' ? 'Millilitre' : 'Gram';
   const [unit, setUnit] = useState<QuantityUnit>(entry.unit);
   const [quantity, setQuantity] = useState<number>(entry.quantity);
-  const [meal, setMeal] = useState<Meal>(entry.meal);
+  const [mealId, setMealId] = useState(entry.mealId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -61,7 +64,7 @@ export function EntrySheet({ entry, onClose, onChanged }: Props) {
             type="button"
             className="button button-primary"
             disabled={busy || !valid}
-            onClick={() => run(() => api.put(`/api/diary/entries/${entry.id}`, { meal, unit, quantity }))}
+            onClick={() => run(() => api.put(`/api/diary/entries/${entry.id}`, { mealId, unit, quantity }))}
           >
             Save · {formatNutrient(preview.energyKcal, 'energyKcal')} kcal
           </button>
@@ -96,14 +99,7 @@ export function EntrySheet({ entry, onClose, onChanged }: Props) {
             </select>
           </label>
         </div>
-        <label className="field">
-          <span>Meal</span>
-          <select value={meal} onChange={(e) => setMeal(e.target.value as Meal)}>
-            {MEALS.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
-        </label>
+        <MealSelect meals={meals} value={mealId} onChange={setMealId} />
         <NutritionTable nutrients={preview} caption="For this amount" />
         <p className="small muted">Nutrition is as it was when you logged this, even if the food has changed since.</p>
         <ErrorNote error={error} />

@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Tally.Api.Data;
 using Tally.Api.Features.Foods;
+using Tally.Api.Features.Meals;
 
 namespace Tally.Api.Features.Diary;
 
-public sealed class DiaryService(TallyDbContext db)
+public sealed class DiaryService(TallyDbContext db, MealPlans mealPlans)
 {
     public async Task<DayDto> GetDayAsync(Guid profileId, DateOnly date, CancellationToken ct)
     {
@@ -13,10 +14,16 @@ public sealed class DiaryService(TallyDbContext db)
             .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id)
             .ToListAsync(ct);
 
-        var meals = Enum.GetValues<Meal>().Select(meal =>
+        // The day's own layout, then any removed meals that still hold entries.
+        var history = await mealPlans.HistoryAsync(profileId, ct);
+        var layout = history.LayoutFor(date);
+        var removed = entries.Select(e => e.MealId).Distinct()
+            .Where(id => layout.All(m => m.Id != id))
+            .Select(id => new MealSlot(id, history.NameFor(id, date)));
+        var meals = layout.Select(m => (Slot: m, Active: true)).Concat(removed.Select(m => (Slot: m, Active: false))).Select(m =>
         {
-            var items = entries.Where(e => e.Meal == meal).Select(EntryDto.From).ToList();
-            return new MealDto(meal, items, NutrientTotals.Sum(items.Select(i => i.Nutrients).ToList()));
+            var items = entries.Where(e => e.MealId == m.Slot.Id).Select(EntryDto.From).ToList();
+            return new MealDto(m.Slot.Id, m.Slot.Name, m.Active, items, NutrientTotals.Sum(items.Select(i => i.Nutrients).ToList()));
         }).ToList();
 
         var goals = await GoalsFor(profileId, ct);
@@ -27,11 +34,11 @@ public sealed class DiaryService(TallyDbContext db)
         Goals.GoalEndpoints.ToDto(await Goals.GoalEndpoints.GetOrCreateAsync(db, profileId, ct));
 
     /// <summary>Snapshots <paramref name="food"/> into a new entry (not yet added to the context).</summary>
-    public static DiaryEntry Snapshot(Food food, Guid profileId, DateOnly date, Meal meal, ResolvedQuantity q) => new()
+    public static DiaryEntry Snapshot(Food food, Guid profileId, DateOnly date, Guid mealId, ResolvedQuantity q) => new()
     {
         ProfileId = profileId,
         Date = date,
-        Meal = meal,
+        MealId = mealId,
         FoodId = food.Id,
         Name = food.Name,
         Brand = food.Restaurant?.Name ?? food.Brand,
@@ -64,13 +71,14 @@ public sealed class DiaryService(TallyDbContext db)
             .FirstOrDefaultAsync(f => f.Id == foodId, ct);
 
     /// <summary>Copies entries (with their snapshots) from one day/meal to another.</summary>
-    public async Task<int> CopyAsync(Guid profileId, DateOnly from, DateOnly to, Meal? fromMeal, Meal? toMeal, CancellationToken ct)
+    public async Task<int> CopyAsync(Guid profileId, DateOnly from, DateOnly to, Guid? fromMeal, Guid? toMeal, CancellationToken ct)
     {
         var source = await db.DiaryEntries.AsNoTracking()
-            .Where(e => e.ProfileId == profileId && e.Date == from && (fromMeal == null || e.Meal == fromMeal))
+            .Where(e => e.ProfileId == profileId && e.Date == from && (fromMeal == null || e.MealId == fromMeal))
             .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id)
             .ToListAsync(ct);
 
+        var history = await mealPlans.HistoryAsync(profileId, ct);
         var now = DateTimeOffset.UtcNow;
         var i = 0;
         foreach (var e in source)
@@ -79,7 +87,7 @@ public sealed class DiaryService(TallyDbContext db)
             {
                 ProfileId = profileId,
                 Date = to,
-                Meal = toMeal ?? e.Meal,
+                MealId = toMeal ?? history.Remap(e.MealId, from, to),
                 FoodId = e.FoodId,
                 RecipeId = e.RecipeId,
                 Name = e.Name,

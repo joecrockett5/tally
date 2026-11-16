@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client';
-import { MEALS, type Meal, type SavedMeal } from '../api/types';
+import type { SavedMeal } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
+import { MealSelect } from '../components/MealSelect';
 import { NutritionTable } from '../components/NutritionTable';
 import { SourceBadge } from '../components/SourceBadge';
-import { mealForHour } from '../lib/dates';
 import { describeQuantity, formatNutrient } from '../lib/nutrients';
 import { useApi } from '../lib/useApi';
+import { defaultMeal, useMeals } from '../lib/useMeals';
 import { useToday } from '../profile/ConfigProvider';
 
 export function SavedMealPage() {
@@ -15,8 +16,11 @@ export function SavedMealPage() {
   const navigate = useNavigate();
   const today = useToday();
   const meal = useApi((s) => api.get<SavedMeal>(`/api/saved-meals/${id}`, s), [id]);
-  const [target, setTarget] = useState<Meal>(mealForHour(new Date().getHours()));
+  const [targetId, setTargetId] = useState<string>();
   const [date, setDate] = useState(today);
+  // The meals on offer are those of the chosen day, which may differ from today's.
+  const layout = useMeals(date || today);
+  const target = layout.meals?.find((x) => x.id === targetId) ?? (layout.meals && defaultMeal(layout.meals));
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
 
@@ -66,30 +70,23 @@ export function SavedMealPage() {
             <span>Date</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
-          <label className="field">
-            <span>Meal</span>
-            <select value={target} onChange={(e) => setTarget(e.target.value as Meal)}>
-              {MEALS.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
+          <MealSelect meals={layout.meals} value={target?.id} onChange={setTargetId} />
         </div>
         <button
           type="button"
           className="button button-primary"
-          disabled={busy || !date}
+          disabled={busy || !date || !target}
           onClick={() =>
             run(async () => {
-              await api.post(`/api/saved-meals/${m.id}/log`, { date, meal: target });
+              await api.post(`/api/saved-meals/${m.id}/log`, { date, mealId: target?.id });
               navigate(`/diary/${date}`);
             })
           }
         >
-          Add to {target}
+          Add to {target?.name ?? '…'}
         </button>
       </section>
-      <ErrorNote error={error} />
+      <ErrorNote error={error ?? layout.error} />
       <button
         type="button"
         className="link-button danger-link"

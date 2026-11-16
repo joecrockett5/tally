@@ -30,6 +30,6 @@ public sealed record SavedMealItemDto(Guid Id, Guid? FoodId, Guid? RecipeId, str
 
 public sealed record SavedMealDto(Guid Id, string Name, IReadOnlyList<SavedMealItemDto> Items, NutrientTotals Totals);
 
-public sealed record SaveFromDiaryRequest(string Name, string Date, Meal Meal);
+public sealed record SaveFromDiaryRequest(string Name, string Date, Guid MealId);
 
-public sealed record LogSavedMealRequest(string Date, Meal Meal);
+public sealed record LogSavedMealRequest(string Date, Guid MealId);

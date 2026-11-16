@@ -11,6 +11,7 @@ import { HistoryPage } from './history/HistoryPage';
 import { ImportPage } from './foods/ImportPage';
 import { RestaurantPage } from './foods/RestaurantPage';
 import { GoalsPage } from './pages/GoalsPage';
+import { MealsPage } from './pages/MealsPage';
 import { ProfilePicker } from './pages/ProfilePicker';
 import { RecipeDetailPage } from './recipes/RecipeDetailPage';
 import { RecipeFormPage } from './recipes/RecipeFormPage';
@@ -29,7 +30,7 @@ function AppRoutes() {
       {profile ? (
         <Route element={<Layout />}>
           <Route path="/diary/:date?" element={<DiaryPage />} />
-          <Route path="/diary/:date/add/:meal" element={<AddFoodPage />} />
+          <Route path="/diary/:date/add/:mealId" element={<AddFoodPage />} />
           <Route path="/foods" element={<FoodsPage />} />
           <Route path="/foods/new" element={<FoodFormPage />} />
           <Route path="/foods/import" element={<ImportPage />} />
@@ -42,6 +43,7 @@ function AppRoutes() {
           <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
           <Route path="/meals/:id" element={<SavedMealPage />} />
           <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/settings/meals" element={<MealsPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="*" element={<Navigate to="/diary" replace />} />
         </Route>

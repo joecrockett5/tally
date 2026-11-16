@@ -17,6 +17,7 @@ receives security fixes.
 ## Things that are by design
 
 Tally has **no passwords or accounts**, and it trusts `X-Forwarded-*` headers from
-any address. It is meant for people you trust, on a private network or behind your
-own reverse proxy (see [Deploying](README.md#deploying)). Reports that amount to
+any address. It is meant for people you trust, on a private network, reached
+directly over its own HTTPS port or through your own reverse proxy (see
+[Deploying](README.md#deploying)). Reports that amount to
 "anyone who can reach the app can use it" are expected behaviour, not vulnerabilities.

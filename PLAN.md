@@ -1,11 +1,11 @@
 # Tally — plan
 
-Self-hosted UK nutrition tracker. One Docker image (`app`: ASP.NET Core API + built React SPA) and one Postgres container (`db`), behind Nginx Proxy Manager.
+Self-hosted UK nutrition tracker. One Docker image (`app`: ASP.NET Core API + built React SPA) and one Postgres container (`db`). The app serves HTTPS itself (self-signed or supplied certificate); a reverse proxy is optional.
 
 ## Architecture
 
 ```
-phone ──HTTPS──▶ Nginx Proxy Manager ──HTTP:8080──▶ app (ASP.NET Core, .NET 10)
+phone ──HTTPS:8443 (or a proxy ──HTTP:8080)──▶ app (ASP.NET Core, .NET 10)
                                                     ├─ /api/*        minimal-API endpoints
                                                     ├─ /healthz      liveness + DB check
                                                     └─ /*            static SPA (wwwroot) + index.html fallback
@@ -51,7 +51,8 @@ OffBarcodeMiss (negative cache)     OffSearchCache (query → barcodes)
   Indexes: GIN(SearchVector), GIN trigram(Name), unique(Source, ExternalId), Barcode.
 - **FoodServing**: Id, FoodId, Name ("1 slice"), Amount (in basis units: g, ml or portions), SortOrder.
 - **Restaurant**: Id, Name, NormalizedName (unique).
-- **DiaryEntry**: Id, ProfileId, Date (`date`, local calendar day), Meal (`Breakfast|Lunch|Dinner|Snacks`), FoodId?, RecipeId?, snapshot: Name, Brand, SourceLabel, Basis, `Nutrients` per basis; quantity: Amount (basis units), Unit (`g|ml|portion|serving`), ServingName?, ServingAmount?, Quantity; CreatedAt. Totals = per-basis × Amount ÷ 100 (or × Amount for portion bases). Editing quantity re-uses the snapshot, never the live food.
+- **DiaryEntry**: Id, ProfileId, Date (`date`, local calendar day), MealId (a slot in the profile's meal layout for that day), FoodId?, RecipeId?, snapshot: Name, Brand, SourceLabel, Basis, `Nutrients` per basis; quantity: Amount (basis units), Unit (`g|ml|portion|serving`), ServingName?, ServingAmount?, Quantity; CreatedAt. Totals = per-basis × Amount ÷ 100 (or × Amount for portion bases). Editing quantity re-uses the snapshot, never the live food.
+- **MealPlan**: Id, ProfileId, EffectiveFrom (`date`), MealIds[], MealNames[] (parallel, in display order). Unique(ProfileId, EffectiveFrom). The layout for a day is the latest plan on or before it, else the four built-in meals (fixed ids). An id survives renames.
 - **Recipe**: Id, ProfileId, Name, Servings, CookedWeightGrams?; **RecipeIngredient**: FoodId, Amount (basis units), ServingName?, Quantity.
 - **SavedMeal**: Id, ProfileId, Name; **SavedMealItem**: FoodId? | RecipeId?, Amount, Unit, ServingName?, ServingAmount?, Quantity.
 - **Goal**: ProfileId (PK), nullable targets for kcal, fat, saturates, carbohydrate, sugars, fibre, protein, salt.
@@ -77,6 +78,7 @@ All `/api/*` except `/api/profiles` (list/create) and `/api/config` require `X-P
 | POST | /api/import/preview, /api/import/commit | CSV/JSON bulk import |
 | GET | /api/diary/{date} | day: meals, entries, subtotals, totals, goals |
 | POST | /api/diary/entries | log food or recipe |
+| GET/PUT | /api/meals | the profile's meal layout for a date; replace it from today |
 | PUT/DELETE | /api/diary/entries/{id} | change quantity/meal, delete |
 | POST | /api/diary/copy | copy a meal (or whole day) from a date to a date |
 | GET/POST/PUT/DELETE | /api/recipes… , POST /api/recipes/{id}/log | recipes |

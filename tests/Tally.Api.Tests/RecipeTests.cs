@@ -46,8 +46,8 @@ public sealed class RecipeTests(TallyApiFactory factory)
         var (client, _) = await factory.CreateProfileClientAsync();
         var (recipe, lentils) = await Chilli(client);
 
-        var bowl = await (await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", Meal.Dinner, null, recipe.Id, null, 1.5, null), Ct)).ReadAsync<EntryDto>();
-        var grams = await (await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", Meal.Lunch, null, recipe.Id, QuantityUnit.Gram, 300, null), Ct)).ReadAsync<EntryDto>();
+        var bowl = await (await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", DefaultMeals.Dinner, null, recipe.Id, null, 1.5, null), Ct)).ReadAsync<EntryDto>();
+        var grams = await (await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", DefaultMeals.Lunch, null, recipe.Id, QuantityUnit.Gram, 300, null), Ct)).ReadAsync<EntryDto>();
         Assert.Equal(210, bowl.Nutrients.EnergyKcal!.Value, 6);
         Assert.Equal("recipe", bowl.Source);
         Assert.Equal(140, grams.Nutrients.EnergyKcal!.Value, 6);
@@ -73,7 +73,7 @@ public sealed class RecipeTests(TallyApiFactory factory)
         var food = await Food(client, "Rice", 130, 3);
         var recipe = await (await client.PostAsJsonAsync("/api/recipes", new RecipeInput("Plain rice", 2, null,
             [new IngredientInput(food.Id, QuantityUnit.Gram, 300, null)]), Ct)).ReadAsync<RecipeDto>();
-        var response = await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-02", Meal.Dinner, null, recipe.Id, QuantityUnit.Gram, 100, null), Ct);
+        var response = await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-02", DefaultMeals.Dinner, null, recipe.Id, QuantityUnit.Gram, 100, null), Ct);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -86,7 +86,7 @@ public sealed class RecipeTests(TallyApiFactory factory)
 
         Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/recipes/{recipe.Id}", Ct)).StatusCode);
         Assert.Empty(await (await bob.GetAsync("/api/recipes", Ct)).ReadAsync<List<RecipeSummaryDto>>());
-        Assert.Equal(HttpStatusCode.NotFound, (await bob.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", Meal.Dinner, null, recipe.Id, null, 1, null), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await bob.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-07-01", DefaultMeals.Dinner, null, recipe.Id, null, 1, null), Ct)).StatusCode);
     }
 
     [Fact]
@@ -108,17 +108,17 @@ public sealed class SavedMealTests(TallyApiFactory factory)
         var (client, _) = await factory.CreateProfileClientAsync();
         var banana = await client.FirstFoodAsync("banana");
         var oats = await client.FirstFoodAsync("porridge oats");
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-08-01", Meal.Breakfast, banana.Id, null, null, 120, null), Ct);
-        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-08-01", Meal.Breakfast, oats.Id, null, null, 50, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-08-01", DefaultMeals.Breakfast, banana.Id, null, null, 120, null), Ct);
+        await client.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-08-01", DefaultMeals.Breakfast, oats.Id, null, null, 50, null), Ct);
 
-        var saved = await (await client.PostAsJsonAsync("/api/saved-meals/from-diary", new SaveFromDiaryRequest("Usual breakfast", "2026-08-01", Meal.Breakfast), Ct)).ReadAsync<SavedMealDto>();
+        var saved = await (await client.PostAsJsonAsync("/api/saved-meals/from-diary", new SaveFromDiaryRequest("Usual breakfast", "2026-08-01", DefaultMeals.Breakfast), Ct)).ReadAsync<SavedMealDto>();
         Assert.Equal(2, saved.Items.Count);
 
-        var result = await (await client.PostAsJsonAsync($"/api/saved-meals/{saved.Id}/log", new LogSavedMealRequest("2026-08-05", Meal.Breakfast), Ct)).ReadAsync<Dictionary<string, int>>();
+        var result = await (await client.PostAsJsonAsync($"/api/saved-meals/{saved.Id}/log", new LogSavedMealRequest("2026-08-05", DefaultMeals.Breakfast), Ct)).ReadAsync<Dictionary<string, int>>();
         Assert.Equal(2, result["logged"]);
 
         var day = await (await client.GetAsync("/api/diary/2026-08-05", Ct)).ReadAsync<DayDto>();
-        var breakfast = day.Meals.Single(m => m.Meal == Meal.Breakfast).Entries;
+        var breakfast = day.Meals.Single(m => m.Id == DefaultMeals.Breakfast).Entries;
         Assert.Equal([banana.Name, oats.Name], breakfast.Select(e => e.Name));
         Assert.Equal(120, breakfast[0].Quantity);
         Assert.Equal(saved.Totals.Values.EnergyKcal!.Value, day.Totals.Values.EnergyKcal!.Value, 6);
@@ -141,6 +141,6 @@ public sealed class SavedMealTests(TallyApiFactory factory)
         Assert.Equal(banana.Nutrients.EnergyKcal!.Value * 2, meal.Totals.Values.EnergyKcal!.Value, 6);
 
         Assert.Empty(await (await other.GetAsync("/api/saved-meals", Ct)).ReadAsync<List<SavedMealDto>>());
-        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/saved-meals/{meal.Id}/log", new LogSavedMealRequest("2026-08-06", Meal.Snacks), Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/saved-meals/{meal.Id}/log", new LogSavedMealRequest("2026-08-06", DefaultMeals.Snacks), Ct)).StatusCode);
     }
 }

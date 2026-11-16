@@ -10,6 +10,7 @@ using Tally.Api.Features.Foods;
 using Tally.Api.Features.Goals;
 using Tally.Api.Features.History;
 using Tally.Api.Features.Import;
+using Tally.Api.Features.Meals;
 using Tally.Api.Features.Profiles;
 using Tally.Api.Features.Recipes;
 using Tally.Api.Features.Restaurants;
@@ -31,6 +32,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddScoped<CofidImporter>();
 builder.Services.AddScoped<FoodSearch>();
+builder.Services.AddScoped<MealPlans>();
 builder.Services.AddScoped<DiaryService>();
 builder.Services.AddScoped<FoodImport>();
 builder.Services.AddScoped<RecipeService>();
@@ -44,10 +46,17 @@ builder.Services.AddHttpClient<OffClient>((sp, http) =>
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddProblemDetails();
 // Imports can be a few hundred KB of CSV/JSON.
-builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 5 * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.Limits.MaxRequestBodySize = 5 * 1024 * 1024;
+    // Runs once per HTTPS endpoint as it is bound (ASPNETCORE_HTTPS_PORTS), and not at all without one.
+    k.ConfigureHttpsDefaults(https =>
+        (https.ServerCertificate, https.ServerCertificateChain) = k.ApplicationServices.GetRequiredService<TlsCertificates>().Get());
+});
+builder.Services.AddSingleton<TlsCertificates>();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
-    // TLS terminates at Nginx Proxy Manager on a private network; trust it.
+    // Optional: a reverse proxy on a private network may terminate TLS instead; trust what it forwards.
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
@@ -79,13 +88,22 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions { ResponseWriter = Health
 
 var api = app.MapGroup("/api");
 api.MapGet("/config", (IOptions<TallyOptions> o, Clock clock) =>
-    new { version = AppInfo.Version, timeZone = o.Value.TimeZone, today = clock.Today, onlineEnabled = o.Value.OpenFoodFacts.Enabled });
+    new
+    {
+        version = AppInfo.Version,
+        timeZone = o.Value.TimeZone,
+        today = clock.Today,
+        onlineEnabled = o.Value.OpenFoodFacts.Enabled,
+        // Lets a page loaded over plain HTTP point at the HTTPS port, which the camera needs.
+        httpsPort = HttpsPort(app.Configuration),
+    });
 api.MapProfileEndpoints();
 
 // Everything below acts on behalf of a profile.
 var scoped = api.MapGroup("").RequireProfile();
 scoped.MapGet("/me", async (ProfileContext profile, TallyDbContext db) =>
     await db.Profiles.Where(p => p.Id == profile.Id).Select(p => new ProfileDto(p.Id, p.Name, p.Avatar, p.Colour)).FirstAsync());
+scoped.MapMealEndpoints();
 scoped.MapDiaryEndpoints();
 scoped.MapFoodEndpoints();
 scoped.MapCustomFoodEndpoints();
@@ -102,5 +120,8 @@ app.MapFallbackToFile("index.html", staticFiles);
 
 app.Run();
 return 0;
+
+static int? HttpsPort(IConfiguration config) =>
+    int.TryParse((config["HTTPS_PORTS"] ?? "").Split(';', ',')[0], out var port) ? port : null;
 
 public partial class Program;

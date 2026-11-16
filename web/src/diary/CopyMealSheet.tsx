@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { api } from '../api/client';
-import type { Meal } from '../api/types';
+import type { MealSlot } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { Sheet } from '../components/Sheet';
 import { addDays, formatDayLabel } from '../lib/dates';
 
 interface Props {
   date: string;
-  meal: Meal;
+  meal: MealSlot;
   onClose: () => void;
   onCopied: (count: number) => void;
 }
@@ -23,8 +23,8 @@ export function CopyMealSheet({ date, meal, onClose, onCopied }: Props) {
       const { copied } = await api.post<{ copied: number }>('/api/diary/copy', {
         fromDate: from,
         toDate: date,
-        fromMeal: meal,
-        toMeal: meal,
+        fromMealId: meal.id,
+        toMealId: meal.id,
       });
       onCopied(copied);
     } catch (err) {
@@ -35,11 +35,11 @@ export function CopyMealSheet({ date, meal, onClose, onCopied }: Props) {
 
   return (
     <Sheet
-      title={`Copy ${meal.toLowerCase()} from…`}
+      title={`Copy ${meal.name.toLowerCase()} from…`}
       onClose={onClose}
       footer={
         <button type="button" className="button button-primary" disabled={busy || !from || from === date} onClick={copy}>
-          Copy {meal.toLowerCase()} from {from ? formatDayLabel(from) : '…'}
+          Copy {meal.name.toLowerCase()} from {from ? formatDayLabel(from) : '…'}
         </button>
       }
     >

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client';
-import type { Day, Entry, Meal } from '../api/types';
+import type { Day, Entry, MealSlot } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { addDays, formatDayLabel, isIsoDate, relativeDayName } from '../lib/dates';
 import { describeQuantity, formatNutrient } from '../lib/nutrients';
@@ -25,8 +25,8 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
   const navigate = useNavigate();
   const day = useApi((s) => api.get<Day>(`/api/diary/${date}`, s), [date, profile.id]);
   const [editing, setEditing] = useState<Entry | null>(null);
-  const [copyMeal, setCopyMeal] = useState<Meal | null>(null);
-  const [saveMeal, setSaveMeal] = useState<Meal | null>(null);
+  const [copyMeal, setCopyMeal] = useState<MealSlot | null>(null);
+  const [saveMeal, setSaveMeal] = useState<MealSlot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const go = (d: string) => {
@@ -34,14 +34,15 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
     navigate(`/diary/${d}`);
   };
 
-  const copyFromYesterday = async (meal: Meal) => {
+  const copyFromYesterday = async (meal: MealSlot) => {
+    const name = meal.name.toLowerCase();
     const { copied } = await api.post<{ copied: number }>('/api/diary/copy', {
       fromDate: addDays(date, -1),
       toDate: date,
-      fromMeal: meal,
-      toMeal: meal,
+      fromMealId: meal.id,
+      toMealId: meal.id,
     });
-    setNotice(copied ? `Copied ${copied} item${copied === 1 ? '' : 's'} from yesterday's ${meal.toLowerCase()}.` : `Nothing was logged for ${meal.toLowerCase()} yesterday.`);
+    setNotice(copied ? `Copied ${copied} item${copied === 1 ? '' : 's'} from yesterday's ${name}.` : `Nothing was logged for ${name} yesterday.`);
     day.reload();
   };
 
@@ -84,14 +85,15 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
       {day.data && (
         <>
           <DayTotals totals={day.data.totals} goals={day.data.goals} />
-          {day.data.meals.map(({ meal, entries, totals }) => (
-            <section key={meal} className="card meal" aria-labelledby={`meal-${meal}`}>
+          {day.data.meals.map(({ entries, totals, active, ...meal }) => (
+            <section key={meal.id} className="card meal" aria-labelledby={`meal-${meal.id}`}>
               <header className="card-header">
-                <h2 id={`meal-${meal}`}>{meal}</h2>
+                <h2 id={`meal-${meal.id}`}>{meal.name}</h2>
                 <span className="row">
                   <span className="num">{formatNutrient(totals.values.energyKcal, 'energyKcal')} kcal</span>
                   <MealMenu
-                    meal={meal}
+                    meal={meal.name}
+                    canCopy={active}
                     hasEntries={entries.length > 0}
                     onCopyYesterday={() => copyFromYesterday(meal)}
                     onCopyFrom={() => setCopyMeal(meal)}
@@ -117,17 +119,25 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
                   ))}
                 </ul>
               )}
-              <Link className="button button-ghost button-block add-food" to={`/diary/${date}/add/${meal.toLowerCase()}`}>
-                + Add food
-              </Link>
+              {active ? (
+                <Link className="button button-ghost button-block add-food" to={`/diary/${date}/add/${meal.id}`}>
+                  + Add food
+                </Link>
+              ) : (
+                <p className="small muted">This meal has been removed. Tap an item to move it to another meal.</p>
+              )}
             </section>
           ))}
+          <Link className="link-button center" to="/settings/meals">
+            Customise meals
+          </Link>
         </>
       )}
 
       {editing && (
         <EntrySheet
           entry={editing}
+          meals={(day.data?.meals ?? []).filter((m) => m.active || m.id === editing.mealId)}
           onClose={() => setEditing(null)}
           onChanged={() => {
             setEditing(null);
@@ -163,14 +173,16 @@ function DiaryDay({ date, today }: { date: string; today: string }) {
 }
 
 interface MealMenuProps {
-  meal: Meal;
+  meal: string;
+  /** False for a removed meal, which can't be added to. */
+  canCopy: boolean;
   hasEntries: boolean;
   onCopyYesterday: () => void;
   onCopyFrom: () => void;
   onSave: () => void;
 }
 
-function MealMenu({ meal, hasEntries, onCopyYesterday, onCopyFrom, onSave }: MealMenuProps) {
+function MealMenu({ meal, canCopy, hasEntries, onCopyYesterday, onCopyFrom, onSave }: MealMenuProps) {
   const [open, setOpen] = useState(false);
   const pick = (fn: () => void) => () => {
     setOpen(false);
@@ -192,12 +204,16 @@ function MealMenu({ meal, hasEntries, onCopyYesterday, onCopyFrom, onSave }: Mea
         <>
           <span className="menu-backdrop" onClick={() => setOpen(false)} />
           <span className="menu-list" role="menu">
-            <button type="button" role="menuitem" onClick={pick(onCopyYesterday)}>
-              Copy from yesterday
-            </button>
-            <button type="button" role="menuitem" onClick={pick(onCopyFrom)}>
-              Copy from a date…
-            </button>
+            {canCopy && (
+              <>
+                <button type="button" role="menuitem" onClick={pick(onCopyYesterday)}>
+                  Copy from yesterday
+                </button>
+                <button type="button" role="menuitem" onClick={pick(onCopyFrom)}>
+                  Copy from a date…
+                </button>
+              </>
+            )}
             {hasEntries && (
               <button type="button" role="menuitem" onClick={pick(onSave)}>
                 Save as meal…

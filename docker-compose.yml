@@ -31,10 +31,22 @@ services:
       db:
         condition: service_healthy
     ports:
-      # APP_PORT: the HTTP port, inside and outside the container.
+      # HTTPS_PORT: the HTTPS port, inside and outside the container. Phones should use this one.
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
+      # APP_PORT: the plain HTTP port, for a reverse proxy or a quick look from a computer.
       - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    volumes:
+      # Tally's self-signed HTTPS certificate, kept so phones only have to accept it once.
+      - tally-tls:/data
+      # To use your own certificate instead, mount it and uncomment the two settings below:
+      # - /path/to/certs:/certs:ro
     environment:
+      ASPNETCORE_HTTPS_PORTS: ${HTTPS_PORT:-8443}
       ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
+      # TALLY_HOSTS: the addresses you open Tally at, e.g. "192.168.1.20, tally.lan", for the self-signed certificate.
+      Tally__Https__Hosts: ${TALLY_HOSTS:-}
+      # Tally__Https__CertificatePath: /certs/fullchain.pem
+      # Tally__Https__KeyPath: /certs/privkey.pem
       # TALLY_TIMEZONE: IANA timezone that decides which calendar day "today" is.
       TZ: ${TALLY_TIMEZONE:-Europe/London}
       Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
@@ -50,3 +62,4 @@ services:
 
 volumes:
   tally-db:
+  tally-tls:
