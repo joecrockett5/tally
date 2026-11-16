@@ -45,9 +45,21 @@ describe('Day progress', () => {
     ]);
     renderWithProfile('/diary/2026-10-17', <Route path="/diary/:date?" element={<DiaryPage />} />);
 
-    expect(await screen.findByRole('progressbar', { name: 'Salt progress' })).toHaveClass('progress-over');
+    // Collapsed by default: just the macros under the calorie number.
+    expect(await screen.findByRole('progressbar', { name: 'Protein progress' })).toHaveClass('progress-under');
+    expect(screen.getByRole('progressbar', { name: 'Carbohydrate progress' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Fat progress' })).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Salt progress' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Energy progress' })).not.toBeInTheDocument();
+    expect(screen.getByText('kcal left')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show all nutrients' }));
+    expect(screen.getByRole('progressbar', { name: 'Salt progress' })).toHaveClass('progress-over');
     expect(screen.getByRole('progressbar', { name: 'Energy progress' })).toHaveClass('progress-good');
     expect(screen.getByRole('progressbar', { name: 'Protein progress' })).toHaveClass('progress-under');
-    expect(screen.getByText('kcal left')).toBeInTheDocument();
+    expect(localStorage.getItem('tally.dayTotalsExpanded')).toBe('1');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show less' }));
+    expect(screen.queryByRole('progressbar', { name: 'Salt progress' })).not.toBeInTheDocument();
   });
 });
