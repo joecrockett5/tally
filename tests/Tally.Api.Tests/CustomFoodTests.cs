@@ -83,7 +83,7 @@ public sealed class CustomFoodTests(TallyApiFactory factory)
     {
         var (alice, _) = await factory.CreateProfileClientAsync();
         var food = await Create(alice, Item("Pasta bake"));
-        await alice.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-06-01", Meal.Dinner, food.Id, null, null, 1, null), Ct);
+        await alice.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest("2026-06-01", DefaultMeals.Dinner, food.Id, null, null, 1, null), Ct);
 
         await alice.PutAsJsonAsync($"/api/foods/{food.Id}", Item("Pasta bake") with { Nutrients = new Nutrients { EnergyKcal = 900 } }, Ct);
         await alice.DeleteAsync($"/api/foods/{food.Id}", Ct);

@@ -14,6 +14,30 @@ public sealed class TallyOptions
     public string CofidPath { get; set; } = "data/cofid/cofid-2021.csv";
 
     public OpenFoodFactsOptions OpenFoodFacts { get; set; } = new();
+
+    public HttpsOptions Https { get; set; } = new();
+}
+
+/// <summary>
+/// The certificate for Tally's own HTTPS port. HTTPS is served on the ports in ASPNETCORE_HTTPS_PORTS;
+/// with none set there is no HTTPS and these settings are unused.
+/// </summary>
+public sealed class HttpsOptions
+{
+    /// <summary>A PEM certificate (with any intermediates) to use instead of a self-signed one.</summary>
+    public string? CertificatePath { get; set; }
+
+    /// <summary>The PEM private key for <see cref="CertificatePath"/>, unless it is in the same file.</summary>
+    public string? KeyPath { get; set; }
+
+    /// <summary>Where the self-signed certificate is kept. Unset, a new one is made on every start.</summary>
+    public string? DataDirectory { get; set; }
+
+    /// <summary>
+    /// Addresses people browse to (comma-separated IPs or names), added to the self-signed certificate.
+    /// Only needed to install it as trusted on a device; accepting the browser warning works without.
+    /// </summary>
+    public string? Hosts { get; set; }
 }
 
 public sealed class OpenFoodFactsOptions

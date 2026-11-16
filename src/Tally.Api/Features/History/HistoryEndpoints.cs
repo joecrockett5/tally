@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Tally.Api.Data;
 using Tally.Api.Features.Diary;
 using Tally.Api.Features.Goals;
+using Tally.Api.Features.Meals;
 using Tally.Api.Infrastructure;
 
 namespace Tally.Api.Features.History;
@@ -37,11 +38,11 @@ public static class HistoryEndpoints
             return Results.Ok(Build(range.From, range.To, entries, goals));
         });
 
-        scoped.MapGet("/export/diary.csv", async (string? from, string? to, TallyDbContext db, ProfileContext profile, CancellationToken ct) =>
+        scoped.MapGet("/export/diary.csv", async (string? from, string? to, MealPlans meals, TallyDbContext db, ProfileContext profile, CancellationToken ct) =>
         {
             if (ParseRange(from, to) is not { } range) return BadRange();
             var entries = await LoadAsync(db, profile.Id, range.From, range.To, ct);
-            var csv = ToCsv(entries);
+            var csv = ToCsv(entries, await meals.HistoryAsync(profile.Id, ct));
             return Results.File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray(),
                 "text/csv; charset=utf-8", $"tally-diary-{range.From:yyyy-MM-dd}-to-{range.To:yyyy-MM-dd}.csv");
         });
@@ -50,7 +51,7 @@ public static class HistoryEndpoints
     private static Task<List<DiaryEntry>> LoadAsync(TallyDbContext db, Guid profileId, DateOnly from, DateOnly to, CancellationToken ct) =>
         db.DiaryEntries.AsNoTracking()
             .Where(e => e.ProfileId == profileId && e.Date >= from && e.Date <= to)
-            .OrderBy(e => e.Date).ThenBy(e => e.Meal).ThenBy(e => e.CreatedAt).ThenBy(e => e.Id)
+            .OrderBy(e => e.Date).ThenBy(e => e.CreatedAt).ThenBy(e => e.Id)
             .ToListAsync(ct);
 
     public static HistoryDto Build(DateOnly from, DateOnly to, IReadOnlyList<DiaryEntry> entries, GoalsDto goals)
@@ -111,8 +112,19 @@ public static class HistoryEndpoints
         return new MacroSplit(protein / n, carbs / n, fat / n, protein / total * 100, carbs / total * 100, fat / total * 100);
     }
 
-    public static string ToCsv(IEnumerable<DiaryEntry> entries)
+    /// <summary>One row per entry, in day order then in each day's own meal order, with the meal names of the time.</summary>
+    public static string ToCsv(IEnumerable<DiaryEntry> entries, MealHistory meals)
     {
+        int Position(DiaryEntry e)
+        {
+            var layout = meals.LayoutFor(e.Date);
+            for (var i = 0; i < layout.Count; i++)
+                if (layout[i].Id == e.MealId) return i;
+            return layout.Count;
+        }
+        // OrderBy is stable, so entries stay in logging order within a meal.
+        entries = entries.OrderBy(e => e.Date).ThenBy(Position);
+
         var sb = new StringBuilder();
         sb.AppendLine(Csv.Line([
             "date", "meal", "food", "brand", "source", "quantity", "unit", "serving", "amount", "amount_unit",
@@ -123,7 +135,7 @@ public static class HistoryEndpoints
             var n = e.Totals();
             sb.AppendLine(Csv.Line([
                 e.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                e.Meal.ToString(),
+                meals.NameFor(e.MealId, e.Date),
                 e.Name,
                 e.Brand,
                 SourceName(e.SourceLabel),

@@ -10,6 +10,8 @@ export interface AppConfig {
   timeZone: string;
   today: string;
   onlineEnabled: boolean;
+  /** The port Tally serves HTTPS on itself, or null when it only serves plain HTTP. */
+  httpsPort: number | null;
 }
 
 export interface Nutrients {
@@ -28,10 +30,19 @@ export type NutrientKey = keyof Nutrients;
 
 export type Basis = 'Per100g' | 'Per100ml' | 'PerPortion';
 export type FoodSourceLabel = 'mine' | 'shared' | 'restaurant' | 'cofid' | 'off' | 'recipe';
-export type Meal = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks';
-export type QuantityUnit = 'Gram' | 'Millilitre' | 'Portion' | 'Serving';
+/** One meal of a day's layout. The id stays the same when the meal is renamed. */
+export interface MealSlot {
+  id: string;
+  name: string;
+}
 
-export const MEALS: Meal[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+/** The meals a profile's diary has on `date`; `effectiveFrom` is null while the built-in defaults apply. */
+export interface MealLayout {
+  date: string;
+  effectiveFrom: string | null;
+  meals: MealSlot[];
+}
+export type QuantityUnit = 'Gram' | 'Millilitre' | 'Portion' | 'Serving';
 
 export interface Serving {
   id: string;
@@ -68,7 +79,7 @@ export interface NutrientTotals {
 export interface Entry {
   id: string;
   date: string;
-  meal: Meal;
+  mealId: string;
   foodId: string | null;
   recipeId: string | null;
   name: string;
@@ -98,7 +109,8 @@ export interface Goals {
 
 export interface Day {
   date: string;
-  meals: { meal: Meal; entries: Entry[]; totals: NutrientTotals }[];
+  /** `active` is false for a meal that has since been removed but still holds entries on this day. */
+  meals: (MealSlot & { active: boolean; entries: Entry[]; totals: NutrientTotals })[];
   totals: NutrientTotals;
   goals: Goals | null;
 }

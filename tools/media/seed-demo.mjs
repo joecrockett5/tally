@@ -40,8 +40,11 @@ async function food(name) {
   return match.id;
 }
 
+// Ids of the built-in meals (DefaultMeals in the API).
+const MEAL = Object.fromEntries(['Breakfast', 'Lunch', 'Dinner', 'Snacks'].map((name, i) => [name, `0a11e000-0000-4000-8000-00000000000${i + 1}`]));
+
 const log = async (date, meal, foodId, quantity, unit = 'Gram') =>
-  api('POST', '/diary/entries', { date, meal, foodId, unit, quantity }, sam);
+  api('POST', '/diary/entries', { date, mealId: MEAL[meal], foodId, unit, quantity }, sam);
 
 // Custom foods: one shared with the household, and a fictional restaurant's menu.
 const flapjack = await api('POST', '/foods', {
@@ -118,7 +121,7 @@ for (let back = 27; back >= 1; back--) {
   await logAll(date, 'Breakfast', pick(breakfasts));
   await logAll(date, 'Lunch', pick(lunches));
   if (back % 6 === 2) await log(date, 'Dinner', bowl.id, 1, 'Portion');
-  else if (back % 3 === 0) await api('POST', '/diary/entries', { date, meal: 'Dinner', recipeId: stirFry.id, unit: 'Portion', quantity: 1 }, sam);
+  else if (back % 3 === 0) await api('POST', '/diary/entries', { date, mealId: MEAL.Dinner, recipeId: stirFry.id, unit: 'Portion', quantity: 1 }, sam);
   else await logAll(date, 'Dinner', pick(dinners));
   await logAll(date, 'Snacks', pick(snacks));
   if (back % 2 === 0) await log(date, 'Snacks', flapjack.id, 60);

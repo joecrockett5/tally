@@ -6,7 +6,7 @@ import { ErrorNote } from '../components/ErrorNote';
 import { NutritionTable } from '../components/NutritionTable';
 import { SourceBadge } from '../components/SourceBadge';
 import { LogFoodSheet, OffAttribution } from '../diary/LogFoodSheet';
-import { formatUkDate, mealForHour } from '../lib/dates';
+import { formatUkDate } from '../lib/dates';
 import { basisLabel } from '../lib/nutrients';
 import { useApi } from '../lib/useApi';
 import { useToday } from '../profile/ConfigProvider';
@@ -143,7 +143,6 @@ export function FoodDetailPage() {
         <LogFoodSheet
           food={f}
           date={today}
-          meal={mealForHour(new Date().getHours())}
           onClose={() => setLogging(false)}
           onLogged={(e) => navigate(`/diary/${e.date}`)}
         />

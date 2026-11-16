@@ -31,6 +31,7 @@
 - **UK nutrition labels:** energy (kcal and kJ), fat, saturates, carbohydrate, sugars, fibre, protein and salt. Unknown values show as “–”, never as 0.
 - **Food data from free sources:** about 2,900 UK generic foods from CoFID, plus Open Food Facts for packaged products, with UK products ranked first.
 - **Barcode scanning:** EAN-13, EAN-8, UPC-A and UPC-E, or type the number in.
+- **Your own meals:** breakfast, lunch, dinner and snacks to start with; each profile can rename, reorder, add and remove meals. Earlier days keep the meals they had.
 - **Your own foods:** per 100 g, per 100 ml or per portion, under a restaurant if you like, private or shared. [Bulk import](docs/IMPORT.md) from CSV or JSON.
 - **Recipes and saved meals:** nutrition worked out from the ingredients; log a usual meal in one tap, or copy meals between days.
 - **Goals:** daily targets for each profile, starting from UK Reference Intakes.
@@ -92,10 +93,22 @@ services:
       db:
         condition: service_healthy
     ports:
-      # APP_PORT: the HTTP port, inside and outside the container.
+      # HTTPS_PORT: the HTTPS port, inside and outside the container. Phones should use this one.
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
+      # APP_PORT: the plain HTTP port, for a reverse proxy or a quick look from a computer.
       - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    volumes:
+      # Tally's self-signed HTTPS certificate, kept so phones only have to accept it once.
+      - tally-tls:/data
+      # To use your own certificate instead, mount it and uncomment the two settings below:
+      # - /path/to/certs:/certs:ro
     environment:
+      ASPNETCORE_HTTPS_PORTS: ${HTTPS_PORT:-8443}
       ASPNETCORE_HTTP_PORTS: ${APP_PORT:-8080}
+      # TALLY_HOSTS: the addresses you open Tally at, e.g. "192.168.1.20, tally.lan", for the self-signed certificate.
+      Tally__Https__Hosts: ${TALLY_HOSTS:-}
+      # Tally__Https__CertificatePath: /certs/fullchain.pem
+      # Tally__Https__KeyPath: /certs/privkey.pem
       # TALLY_TIMEZONE: IANA timezone that decides which calendar day "today" is.
       TZ: ${TALLY_TIMEZONE:-Europe/London}
       Tally__TimeZone: ${TALLY_TIMEZONE:-Europe/London}
@@ -111,6 +124,7 @@ services:
 
 volumes:
   tally-db:
+  tally-tls:
 ```
 
 **2. Choose a database password.** Open Food Facts also asks every app for a contact email, so put yours here:
@@ -126,7 +140,7 @@ echo "OFF_CONTACT_EMAIL=you@example.com" >> .env
 docker compose up -d
 ```
 
-**4. Open <http://localhost:8080>** (or `http://<server>:8080` from another device) and add your first profile. The first start takes a few seconds while Tally sets up its database and loads the CoFID foods.
+**4. Open <https://localhost:8443>** (or `https://<server>:8443` from another device), accept the certificate warning, and add your first profile. Tally makes its own self-signed certificate, which is why the browser warns the first time; see [Deploying](#deploying). The first start takes a few seconds while Tally sets up its database and loads the CoFID foods.
 
 To check it's running:
 
@@ -135,10 +149,10 @@ curl http://localhost:8080/healthz
 ```
 
 ```json
-{"ok":true,"version":"1.0.0"}
+{"ok":true,"version":"1.1.0"}
 ```
 
-The camera and “Add to Home Screen” need HTTPS on phones, so see [Deploying](#deploying) before you hand it to the household.
+Plain HTTP is also there on port 8080, but phones only allow the camera over HTTPS, so give the household the `https://` address.
 
 <details>
 <summary>Prefer <code>docker run</code>?</summary>
@@ -156,13 +170,17 @@ docker run -d --name tally-db --network tally --restart unless-stopped \
   postgres:18-alpine
 
 docker run -d --name tally-app --network tally --restart unless-stopped \
-  -p 8080:8080 \
+  -p 8443:8443 -p 8080:8080 \
+  -v tally-tls:/data \
+  -e "Tally__Https__Hosts=192.168.1.20" \
   -e "ConnectionStrings__Tally=Host=tally-db;Port=5432;Database=tally;Username=tally;Password=$POSTGRES_PASSWORD;Gss Encryption Mode=Disable" \
   -e Tally__OpenFoodFacts__ContactEmail=you@example.com \
   ghcr.io/joecrockett5/tally:latest
 ```
 
 Tally retries its database connection on start, so it's fine that Postgres takes a moment to come up.
+
+To serve HTTPS on another port, say 9443, replace `-p 8443:8443` with `-p 9443:9443 -e ASPNETCORE_HTTPS_PORTS=9443`. Keep the port the same inside and outside the container: the scanner's link to the HTTPS address uses the inside one.
 
 </details>
 
@@ -176,7 +194,9 @@ Set these in the `.env` file next to `docker-compose.yml`, then run `docker comp
 | `POSTGRES_USER` | `tally` | Database user. |
 | `POSTGRES_DB` | `tally` | Database name. |
 | `VERSION` | `latest` | Image tag to run. See [Updating and versions](#updating-and-versions). |
-| `APP_PORT` | `8080` | HTTP port, inside and outside the container. |
+| `HTTPS_PORT` | `8443` | HTTPS port, inside and outside the container. |
+| `TALLY_HOSTS` | empty | The addresses you open Tally at, comma-separated, such as `192.168.1.20, tally.lan`. They go into the self-signed certificate; changing them makes a new one. |
+| `APP_PORT` | `8080` | Plain HTTP port, inside and outside the container. |
 | `TALLY_TIMEZONE` | `Europe/London` | IANA timezone that decides which calendar day “today” is. Diary days are stored as local dates, so entries don't jump days at midnight or when the clocks change. |
 | `OFF_CONTACT_EMAIL` | empty | Sent to Open Food Facts in the User-Agent (`Tally/<version> (<email>)`), as they ask every app to do. |
 | `OFF_ENABLED` | `true` | `false` turns off all online lookups, leaving your own foods and CoFID. |
@@ -192,7 +212,12 @@ The compose file maps the settings above onto these. With `docker run`, set them
 | Variable | Default | Meaning |
 |---|---|---|
 | `ConnectionStrings__Tally` | localhost development database | Npgsql connection string. Keep `Gss Encryption Mode=Disable`: the image has no Kerberos libraries. |
-| `ASPNETCORE_HTTP_PORTS` | `8080` | Port the app listens on inside the container. |
+| `ASPNETCORE_HTTPS_PORTS` | `8443` | HTTPS port inside the container. Set it to an empty value to serve plain HTTP only. |
+| `ASPNETCORE_HTTP_PORTS` | `8080` | Plain HTTP port inside the container. |
+| `Tally__Https__Hosts` | empty | Same as `TALLY_HOSTS`. |
+| `Tally__Https__DataDirectory` | `/data/tls` | Not in compose. Where the self-signed certificate is kept. |
+| `Tally__Https__CertificatePath` | empty | Commented out in compose. PEM certificate to use instead of the self-signed one, with any intermediates after it. |
+| `Tally__Https__KeyPath` | empty | Commented out in compose. PEM private key for that certificate. |
 | `TZ` | UTC | The container's system timezone. Compose sets it from `TALLY_TIMEZONE`. |
 | `Tally__TimeZone` | `Europe/London` | Same as `TALLY_TIMEZONE`. |
 | `Tally__OpenFoodFacts__Enabled` | `true` | Same as `OFF_ENABLED`. |
@@ -234,13 +259,14 @@ Database migrations run automatically on start and can't be undone automatically
 
 ## Your data
 
-The app container is stateless. Everything you enter lives in Postgres, in one named Docker volume:
+Everything you enter lives in Postgres, in one named Docker volume. A second, small volume holds only the HTTPS certificate:
 
 | Volume | Mounted at | Holds |
 |---|---|---|
-| `tally_tally-db` (just `tally-db` if you used `docker run`) | `/var/lib/postgresql` in the `db` container | Profiles, diary, foods, recipes, goals and cached Open Food Facts products. |
+| `tally_tally-db` (just `tally-db` if you used `docker run`) | `/var/lib/postgresql` in the `db` container | Profiles, diary, meals, foods, recipes, goals and cached Open Food Facts products. |
+| `tally_tally-tls` (`tally-tls` with `docker run`) | `/data` in the `app` container | Tally's self-signed certificate and its key. Nothing to back up: lose it and Tally makes a new one, which each phone has to accept again. |
 
-The only thing kept outside it is each browser's remembered profile choice.
+The only thing kept outside them is each browser's remembered profile choice.
 
 ### Backup
 
@@ -272,14 +298,61 @@ docker compose exec app dotnet Tally.Api.dll import-cofid
 
 ## Deploying
 
-Tally speaks plain HTTP, so put a reverse proxy in front of it for HTTPS. Tally reads `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, and doesn't add its own HTTPS redirect or HSTS.
+Tally serves HTTPS itself, so it works straight from your server's address with nothing in front of it: `https://192.168.1.20:8443`. Plain HTTP stays available on port 8080, for a [reverse proxy](#behind-a-reverse-proxy) if you'd rather use one.
 
 > [!WARNING]
-> Tally has no login, and it trusts forwarded headers from any address. **Don't expose its port directly to the internet.** Only your proxy should reach it: firewall the port, or publish it on localhost only by changing the compose `ports:` line to `"127.0.0.1:8080:8080"`. To put a gate in front of the profile picker, add basic auth or an IP allow-list at the proxy.
+> Tally has no login. **Keep it on your home network and don't expose its ports to the internet.** To reach it from outside, use a VPN such as WireGuard or Tailscale, or put a reverse proxy with basic auth or an IP allow-list in front of it.
+
+### The built-in certificate
+
+On first start Tally creates a self-signed certificate and keeps it in the `tally-tls` volume. Nobody vouches for a self-signed certificate, so each browser shows a warning the first time. The connection is encrypted all the same, and the camera works once you've accepted it:
+
+- **Android (Chrome):** **Advanced** → **Proceed to …**
+- **iPhone (Safari):** **Show Details** → **visit this website**
+
+Set `TALLY_HOSTS` in `.env` to the addresses you open Tally at, for example `TALLY_HOSTS=192.168.1.20, tally.lan`. Tally runs inside a container and can't see your server's address by itself, and a certificate that names the right address is what lets you trust it properly (below). Give the server a fixed address on your router, or the address in the certificate goes stale.
+
+The certificate lasts a little over two years and Tally replaces it by itself on a restart in its last 30 days. It also makes a new one when you change `TALLY_HOSTS`. Either way, phones are asked to accept the new one.
+
+**Getting rid of the warning, and installing on Android.** Chrome on Android only offers **Install app** on a connection it fully trusts. To get that, install Tally's certificate on the phone. Copy it out of the container:
+
+```bash
+docker compose cp app:/data/tls/tally.crt tally.crt
+```
+
+Send `tally.crt` to the phone, then:
+
+- **Android:** Settings → Security → Encryption & credentials → Install a certificate → **CA certificate**.
+- **iPhone:** open the file, install the profile in Settings, then turn it on under Settings → General → About → Certificate Trust Settings.
+
+A trusted certificate is trusted for whatever its key signs, so this is only as safe as that key. It stays in the `tally-tls` volume on your server; don't copy `tally.key` anywhere.
+
+### Your own certificate
+
+If you have a certificate for a name that points at your server (from Let's Encrypt with a DNS challenge, say, or your own CA), mount it and point Tally at it. In `docker-compose.yml`, uncomment the three lines:
+
+```yaml
+    volumes:
+      - tally-tls:/data
+      - /path/to/certs:/certs:ro
+    environment:
+      Tally__Https__CertificatePath: /certs/fullchain.pem
+      Tally__Https__KeyPath: /certs/privkey.pem
+```
+
+Both files are PEM, and the key must be unencrypted and readable by the container's user (uid 1654). Tally reads them on start, so restart it after a renewal: `docker compose restart app`.
+
+### A different HTTPS port
+
+Set `HTTPS_PORT` in `.env`, for example `HTTPS_PORT=9443`, and run `docker compose up -d`. Tally is then at `https://<server>:9443`. Use `HTTPS_PORT=443` to drop the port from the address altogether. This works with either certificate, and the plain HTTP port moves the same way with `APP_PORT`.
+
+### Behind a reverse proxy
+
+A proxy is optional. If you already run one, point it at the plain HTTP port. Tally reads `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` from any address, and doesn't add its own HTTPS redirect or HSTS.
 
 **Upload size:** bulk imports go through the proxy, and Tally accepts request bodies of up to 5 MB. nginx's default limit is 1 MB, so raise it as shown. Caddy has no limit by default.
 
-### Caddy
+#### Caddy
 
 Caddy gets a certificate automatically and sets the forwarded headers for you:
 
@@ -289,7 +362,7 @@ tally.example.com {
 }
 ```
 
-### nginx
+#### nginx
 
 ```nginx
 server {
@@ -311,17 +384,17 @@ server {
 }
 ```
 
-### Nginx Proxy Manager
+#### Nginx Proxy Manager
 
 Add a proxy host with scheme `http`, your Docker host's address and port `8080`. On the SSL tab, request a certificate and tick **Force SSL**. To allow imports over 1 MB, add `client_max_body_size 5m;` on the Advanced tab.
 
 ### Phones
 
-Browsers only allow the camera on HTTPS, or on `http://localhost` on the device itself. Over plain HTTP on a LAN address, everything works except the camera: the scanner explains why and offers manual barcode entry. Scanning uses the browser's `BarcodeDetector` where it's available and falls back to ZXing, for example on iPhone.
+Browsers only allow the camera on HTTPS, or on `http://localhost` on the device itself. Over plain HTTP on a LAN address, everything works except the camera: the scanner explains why, links to the HTTPS address and offers manual barcode entry. Scanning uses the browser's `BarcodeDetector` where it's available and falls back to ZXing, for example on iPhone.
 
 To install the app, open your HTTPS address, then:
 
-- **Android (Chrome):** menu → **Install app** or **Add to Home screen**.
+- **Android (Chrome):** menu → **Install app** or **Add to Home screen**. With the self-signed certificate, Chrome only offers a plain shortcut until you [trust the certificate](#the-built-in-certificate).
 - **iPhone (Safari):** Share → **Add to Home Screen**.
 
 ## Development

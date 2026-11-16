@@ -10,7 +10,8 @@ One line of reasoning each. Grouped by area.
 - **xUnit v3 + Testcontainers.PostgreSql + WebApplicationFactory** — real Postgres for search/FTS/trigram behaviour; one container shared per test collection for speed.
 - **Node 24 LTS** in the build stage.
 - **Healthcheck runs the app binary** (`dotnet Tally.Api.dll healthcheck`) instead of adding curl to the runtime image — no extra packages.
-- **ForwardedHeaders trusts any proxy by default** (`KnownProxies`/`KnownIPNetworks` cleared) because the container only listens on a private Docker/LAN network behind NPM; documented in README.
+- **ForwardedHeaders trusts any proxy by default** (`KnownProxies`/`KnownIPNetworks` cleared) because the container only listens on a private Docker/LAN network; documented in README.
+- **Built-in HTTPS, self-signed by default.** The camera needs a secure context and a bare LAN IP can't get a public certificate, so the app makes its own (ECDSA P-256, 820 days to stay under Apple's 825-day limit, renewed on start in its last 30 days) and persists it so phones accept it once. It is marked as a CA so it can be installed as trusted on Android/iOS. The addresses it names come from `TALLY_HOSTS`, since the container can't see the host's LAN address. A supplied PEM certificate replaces it. Plain HTTP stays on 8080 for proxies and the image healthcheck; there is no HTTP→HTTPS redirect, because the two are on different ports and a proxy may be in front.
 
 ## Frontend
 
@@ -72,6 +73,8 @@ One line of reasoning each. Grouped by area.
 ## Diary
 
 - Diary date is a Postgres `date` (local calendar day). Timezone defaults to `Europe/London` (`TALLY_TIMEZONE`).
+- **Meals are per profile and dated.** Editing meals writes a layout effective from today (server timezone); a second edit on the same day replaces it. Earlier days keep the layout they had. Up to 12 meals, names up to 40 characters, unique ignoring case.
+- A removed meal that still holds entries on a day is shown on that day (marked inactive: no adding or copying into it) so nothing disappears; its entries can be moved. Moving an entry to another date, or copying a meal across a layout change, keeps the meal by id, else by name.
 - "Copy meal" copies the **snapshots** of the source entries (it's a copy of what was eaten), not fresh food values.
 - Recent = last 20 distinct foods/recipes logged; Frequent = top 20 by count over the last 90 days.
 

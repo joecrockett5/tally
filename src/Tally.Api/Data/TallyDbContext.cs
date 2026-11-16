@@ -14,6 +14,7 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<SavedMeal> SavedMeals => Set<SavedMeal>();
     public DbSet<Goal> Goals => Set<Goal>();
+    public DbSet<MealPlan> MealPlans => Set<MealPlan>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder c)
     {
@@ -118,6 +119,12 @@ public sealed class TallyDbContext(DbContextOptions<TallyDbContext> options) : D
         {
             e.HasKey(g => g.ProfileId);
             e.HasOne<Profile>().WithOne().HasForeignKey<Goal>(g => g.ProfileId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<MealPlan>(e =>
+        {
+            e.HasOne<Profile>().WithMany().HasForeignKey(p => p.ProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.ProfileId, p.EffectiveFrom }).IsUnique();
         });
 
         b.Entity<OffSearchCache>(e =>

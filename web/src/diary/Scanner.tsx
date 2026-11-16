@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Sheet } from '../components/Sheet';
+import { useConfig } from '../profile/ConfigProvider';
 
 export interface ScanResult {
   code: string;
@@ -46,6 +47,7 @@ async function nativeDetector(): Promise<BarcodeDetectorLike | null> {
  * stopped as soon as a code is read or the scanner closes.
  */
 export function Scanner({ onDetected, onClose }: Props) {
+  const { httpsPort } = useConfig();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [state, setState] = useState<CameraState>('starting');
@@ -181,8 +183,17 @@ export function Scanner({ onDetected, onClose }: Props) {
         )}
         {state === 'insecure' && (
           <p className="note note-warn">
-            The camera only works when Tally is opened over <strong>HTTPS</strong>. Open it through your secure address
-            (set up in Nginx Proxy Manager), or type the barcode below.
+            The camera only works when Tally is opened over <strong>HTTPS</strong>.{' '}
+            {httpsPort ? (
+              <>
+                <a href={`https://${location.hostname}${httpsPort === 443 ? '' : `:${httpsPort}`}${location.pathname}`}>
+                  Open the secure version
+                </a>{' '}
+                (your browser will ask you to accept Tally's certificate the first time), or type the barcode below.
+              </>
+            ) : (
+              'Open it through its https:// address, or type the barcode below.'
+            )}
           </p>
         )}
         {state === 'unsupported' && <p className="note note-warn">This browser can't use the camera. Type the barcode below.</p>}

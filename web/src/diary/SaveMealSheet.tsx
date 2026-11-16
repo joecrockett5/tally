@@ -1,18 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { api } from '../api/client';
-import type { Meal } from '../api/types';
+import type { MealSlot } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { Sheet } from '../components/Sheet';
 
 interface Props {
   date: string;
-  meal: Meal;
+  meal: MealSlot;
   onClose: () => void;
   onSaved: (name: string) => void;
 }
 
 export function SaveMealSheet({ date, meal, onClose, onSaved }: Props) {
-  const [name, setName] = useState(`Usual ${meal.toLowerCase()}`);
+  const [name, setName] = useState(`Usual ${meal.name.toLowerCase()}`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -20,7 +20,7 @@ export function SaveMealSheet({ date, meal, onClose, onSaved }: Props) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.post('/api/saved-meals/from-diary', { name, date, meal });
+      await api.post('/api/saved-meals/from-diary', { name, date, mealId: meal.id });
       onSaved(name);
     } catch (err) {
       setError(err as Error);
@@ -29,7 +29,7 @@ export function SaveMealSheet({ date, meal, onClose, onSaved }: Props) {
   };
 
   return (
-    <Sheet title={`Save ${meal.toLowerCase()} as a meal`} onClose={onClose}>
+    <Sheet title={`Save ${meal.name.toLowerCase()} as a meal`} onClose={onClose}>
       <form className="stack" onSubmit={save}>
         <label className="field">
           <span>Name</span>

@@ -1,23 +1,28 @@
 import { useState } from 'react';
 import { api } from '../api/client';
-import { MEALS, type Entry, type Meal, type Recipe } from '../api/types';
+import type { Entry, Recipe } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
+import { MealSelect } from '../components/MealSelect';
 import { NutritionTable } from '../components/NutritionTable';
 import { Sheet } from '../components/Sheet';
 import { formatNutrient, scaleNutrients } from '../lib/nutrients';
+import { defaultMeal, useMeals } from '../lib/useMeals';
 
 interface Props {
   recipe: Recipe;
   date: string;
-  meal: Meal;
+  /** The meal to offer first; without it, the one that fits the time of day. */
+  mealId?: string;
   onClose: () => void;
   onLogged: (entry: Entry) => void;
 }
 
-export function LogRecipeSheet({ recipe, date, meal: initialMeal, onClose, onLogged }: Props) {
+export function LogRecipeSheet({ recipe, date, mealId: initialMealId, onClose, onLogged }: Props) {
   const [byGrams, setByGrams] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [meal, setMeal] = useState<Meal>(initialMeal);
+  const [mealId, setMealId] = useState(initialMealId);
+  const layout = useMeals(date);
+  const meal = layout.meals?.find((m) => m.id === mealId) ?? (layout.meals && defaultMeal(layout.meals));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -29,7 +34,7 @@ export function LogRecipeSheet({ recipe, date, meal: initialMeal, onClose, onLog
   const log = async () => {
     setBusy(true);
     try {
-      onLogged(await api.post<Entry>('/api/diary/entries', { date, meal, recipeId: recipe.id, unit: byGrams ? 'Gram' : 'Portion', quantity }));
+      onLogged(await api.post<Entry>('/api/diary/entries', { date, mealId: meal?.id, recipeId: recipe.id, unit: byGrams ? 'Gram' : 'Portion', quantity }));
     } catch (err) {
       setError(err as Error);
       setBusy(false);
@@ -41,8 +46,8 @@ export function LogRecipeSheet({ recipe, date, meal: initialMeal, onClose, onLog
       title="Add recipe to diary"
       onClose={onClose}
       footer={
-        <button type="button" className="button button-primary" disabled={!valid || busy} onClick={log}>
-          Add to {meal} · {formatNutrient(preview.energyKcal, 'energyKcal')} kcal
+        <button type="button" className="button button-primary" disabled={!valid || busy || !meal} onClick={log}>
+          Add to {meal?.name ?? 'diary'} · {formatNutrient(preview.energyKcal, 'energyKcal')} kcal
         </button>
       }
     >
@@ -75,16 +80,9 @@ export function LogRecipeSheet({ recipe, date, meal: initialMeal, onClose, onLog
             </select>
           </label>
         </div>
-        <label className="field">
-          <span>Meal</span>
-          <select value={meal} onChange={(e) => setMeal(e.target.value as Meal)}>
-            {MEALS.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
-        </label>
+        <MealSelect meals={layout.meals} value={meal?.id} onChange={setMealId} />
         <NutritionTable nutrients={preview} incomplete={recipe.totals.incomplete} caption="For this amount" />
-        <ErrorNote error={error} />
+        <ErrorNote error={error ?? layout.error} />
       </div>
     </Sheet>
   );

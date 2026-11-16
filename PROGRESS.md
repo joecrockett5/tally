@@ -19,6 +19,7 @@
 - **Phase 8 — History and export:** `/api/history` returns every day in a range with totals, average per nutrient over logged days only, macro energy split (UK factors), and days on target (energy ±10% and no limit exceeded); CSV export (one row per entry: date, meal, food, brand, source, quantity, unit, serving, amount and all nutrients; blanks for unknowns). History page with week (Mon–Sun) / month navigation, summary tiles, daily energy bar chart against the target (Recharts, tooltip), averages vs goals, macro split bar + table, day-by-day table, and CSV download for any date range.
 
 - **Phase 9 — PWA and polish:** web manifest, generated icons (`tools/icons/make_icons.py`, incl. maskable and Apple touch icon), Workbox service worker caching the app shell only, cache headers for shell vs hashed assets, offline banner, top-level error boundary, empty states throughout, mobile layout pass, full README (first run, NPM setup, HTTPS/camera, backup/restore, updating, licences, development).
+- **After 1.0 — custom meals and built-in HTTPS:** per-profile, dated meal layouts (`MealPlan`; diary entries reference a meal id; old days keep their layout) with a meals editor in the web app; Kestrel serves HTTPS on 8443 with a persisted self-signed certificate or a supplied one, so a reverse proxy is optional.
 
 ## Status
 
@@ -32,7 +33,7 @@ Definition-of-done checks:
 - Profile → scan → log → totals: exercised in a desktop browser at phone size with manual barcode entry and search; the live-camera path is covered by component tests only (see limitations).
 
 ## Known limitations
-- **Not tested on physical phones.** Camera scanning (BarcodeDetector on Android, ZXing on iOS Safari) and PWA install need an HTTPS deployment behind NPM to try on real devices; this has not been done yet.
+- **Not tested on physical phones.** Camera scanning (BarcodeDetector on Android, ZXing on iOS Safari) and PWA install need the HTTPS address opened on real devices; this has not been done yet.
 - The service worker was verified in headless Chromium; the Claude desktop browser pane used for UI checks refuses service worker registration, so install/update behaviour wasn't checked there.
 - OFF data quality varies (e.g. some products' English name is odd, or nutrition is missing); Tally shows what OFF has, with "–" for unknowns.
 - Search-a-licious has no rate limit of its own documented; Tally applies OFF's 10 searches/minute to it. Heavy simultaneous use by several people can show "online search is rate limited" for a minute; local and cached results are unaffected.

@@ -6,7 +6,7 @@ namespace Tally.Api.Features.Diary;
 public sealed record EntryDto(
     Guid Id,
     DateOnly Date,
-    Meal Meal,
+    Guid MealId,
     Guid? FoodId,
     Guid? RecipeId,
     string Name,
@@ -23,11 +23,12 @@ public sealed record EntryDto(
     Nutrients Nutrients)
 {
     public static EntryDto From(DiaryEntry e) => new(
-        e.Id, e.Date, e.Meal, e.FoodId, e.RecipeId, e.Name, e.Brand, e.SourceLabel, e.Basis, e.PortionName,
+        e.Id, e.Date, e.MealId, e.FoodId, e.RecipeId, e.Name, e.Brand, e.SourceLabel, e.Basis, e.PortionName,
         e.Unit, e.Quantity, e.ServingName, e.ServingAmount, e.Amount, e.PerBasis, e.Totals());
 }
 
-public sealed record MealDto(Meal Meal, IReadOnlyList<EntryDto> Entries, NutrientTotals Totals);
+/// <param name="Active">False for a meal that has since been removed but still holds entries on this day.</param>
+public sealed record MealDto(Guid Id, string Name, bool Active, IReadOnlyList<EntryDto> Entries, NutrientTotals Totals);
 
 public sealed record DayDto(DateOnly Date, IReadOnlyList<MealDto> Meals, NutrientTotals Totals, GoalsDto? Goals);
 
@@ -37,10 +38,10 @@ public sealed record GoalsDto(
     double? Sugars, double? Fibre, double? Protein, double? Salt);
 
 public sealed record LogEntryRequest(
-    string Date, Meal Meal, Guid? FoodId, Guid? RecipeId, QuantityUnit? Unit, double Quantity, Guid? ServingId);
+    string Date, Guid MealId, Guid? FoodId, Guid? RecipeId, QuantityUnit? Unit, double Quantity, Guid? ServingId);
 
-public sealed record UpdateEntryRequest(Meal? Meal, string? Date, QuantityUnit? Unit, double? Quantity);
+public sealed record UpdateEntryRequest(Guid? MealId, string? Date, QuantityUnit? Unit, double? Quantity);
 
-public sealed record CopyRequest(string FromDate, string ToDate, Meal? FromMeal, Meal? ToMeal);
+public sealed record CopyRequest(string FromDate, string ToDate, Guid? FromMealId, Guid? ToMealId);
 
 public sealed record QuickPickDto(FoodDto Food, QuantityUnit Unit, double Quantity, Guid? ServingId, int TimesLogged);

@@ -5,7 +5,6 @@ import type { Recipe } from '../api/types';
 import { ErrorNote } from '../components/ErrorNote';
 import { NutritionTable } from '../components/NutritionTable';
 import { SourceBadge } from '../components/SourceBadge';
-import { mealForHour } from '../lib/dates';
 import { describeQuantity, formatNutrient } from '../lib/nutrients';
 import { useApi } from '../lib/useApi';
 import { useToday } from '../profile/ConfigProvider';
@@ -95,7 +94,7 @@ export function RecipeDetailPage() {
           Delete recipe
         </button>
       )}
-      {logging && <LogRecipeSheet recipe={r} date={today} meal={mealForHour(new Date().getHours())} onClose={() => setLogging(false)} onLogged={(e) => navigate(`/diary/${e.date}`)} />}
+      {logging && <LogRecipeSheet recipe={r} date={today} onClose={() => setLogging(false)} onLogged={(e) => navigate(`/diary/${e.date}`)} />}
     </div>
   );
 }

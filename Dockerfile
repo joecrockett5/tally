@@ -21,12 +21,14 @@ RUN dotnet restore src/Tally.Api/Tally.Api.csproj
 COPY src/Tally.Api/ src/Tally.Api/
 COPY data/cofid/ data/cofid/
 RUN dotnet publish src/Tally.Api/Tally.Api.csproj -c Release -o /out --no-restore -p:UseAppHost=false
+# The runtime image has no shell to create this in; see the COPY below.
+RUN mkdir -p /data/tls
 
 # ---- 3. Runtime ----------------------------------------------------------
 # This stage alone is built for each target architecture. Chiseled Ubuntu has no
 # shell or package manager; "extra" adds the ICU and tzdata the app needs for
-# timezones. There is no VOLUME: the app keeps nothing on disk, all data lives in
-# Postgres (see docker-compose.yml).
+# timezones. All data lives in Postgres; the only thing the app keeps on disk is
+# its self-signed HTTPS certificate, under /data/tls (see docker-compose.yml).
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.title="Tally" \
@@ -37,12 +39,16 @@ LABEL org.opencontainers.image.title="Tally" \
 WORKDIR /app
 ENV APP_VERSION=${APP_VERSION} \
     ASPNETCORE_HTTP_PORTS=8080 \
+    ASPNETCORE_HTTPS_PORTS=8443 \
+    Tally__Https__DataDirectory=/data/tls \
     DOTNET_CLI_TELEMETRY_OPTOUT=1
 COPY --from=api /out ./
 COPY --from=web /web/dist ./wwwroot
-# Non-root: $APP_UID is defined by the .NET base image.
+# Non-root: $APP_UID (1654) is defined by the .NET base image. /data is owned by
+# it so the certificate can be saved, including in a new volume mounted there.
+COPY --from=api --chown=1654:1654 /data /data
 USER $APP_UID
-EXPOSE 8080
+EXPOSE 8080 8443
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD ["dotnet", "Tally.Api.dll", "healthcheck"]
 ENTRYPOINT ["dotnet", "Tally.Api.dll"]

@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { emptyDay, entry, nutrients } from '../test/fixtures';
+import { emptyDay, entry, MEAL, nutrients } from '../test/fixtures';
 import { mockFetch } from '../test/mockFetch';
 import { renderWithProfile, testProfile as profile } from '../test/renderWithProfile';
 import { DiaryPage } from './DiaryPage';
@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('DiaryPage', () => {
   it('shows meals, entries and dashes for unknown nutrients', async () => {
-    const day = emptyDay('2026-10-17', [entry({ meal: 'Lunch', name: 'Mystery bar' })]);
+    const day = emptyDay('2026-10-17', [entry({ mealId: MEAL.Lunch, name: 'Mystery bar' })]);
     day.totals = { values: nutrients({ energyKcal: 114 }), incomplete: ['fat'] };
     mockFetch([
       { path: '/api/profiles/p1', body: profile },
@@ -46,8 +46,32 @@ describe('DiaryPage', () => {
     expect(JSON.parse(post[1]!.body as string)).toEqual({
       fromDate: '2026-10-16',
       toDate: '2026-10-17',
-      fromMeal: 'Breakfast',
-      toMeal: 'Breakfast',
+      fromMealId: MEAL.Breakfast,
+      toMealId: MEAL.Breakfast,
     });
+  });
+
+  it('shows custom meals, and a removed meal that still has entries without a way to add to it', async () => {
+    const day = emptyDay('2026-10-17');
+    day.meals = [
+      { id: 'm-brunch', name: 'Brunch', active: true, entries: [], totals: day.totals },
+      { id: MEAL.Snacks, name: 'Snacks', active: false, entries: [entry({ mealId: MEAL.Snacks })], totals: day.totals },
+    ];
+    mockFetch([
+      { path: '/api/profiles/p1', body: profile },
+      { path: '/api/diary/2026-10-17', body: day },
+    ]);
+    renderDiary('/diary/2026-10-17');
+
+    const brunch = await screen.findByRole('region', { name: 'Brunch' });
+    expect(within(brunch).getByRole('link', { name: '+ Add food' })).toHaveAttribute('href', '/diary/2026-10-17/add/m-brunch');
+    const snacks = screen.getByRole('region', { name: 'Snacks' });
+    expect(within(snacks).queryByRole('link', { name: '+ Add food' })).not.toBeInTheDocument();
+    expect(within(snacks).getByText(/has been removed/)).toBeInTheDocument();
+
+    // The entry can be moved out of the removed meal, or left where it is.
+    await userEvent.click(within(snacks).getByRole('button', { name: /Banana/ }));
+    const options = within(screen.getByRole('combobox', { name: 'Meal' })).getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Brunch', 'Snacks']);
   });
 });

@@ -12,8 +12,8 @@ public sealed class DiaryTests(TallyApiFactory factory)
 {
     private const string Day = "2026-03-29"; // BST starts that day: dates must not shift
 
-    private static Task<HttpResponseMessage> Log(HttpClient c, Guid foodId, double qty, QuantityUnit? unit = null, Guid? servingId = null, Meal meal = Meal.Lunch, string date = Day) =>
-        c.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest(date, meal, foodId, null, unit, qty, servingId), Ct);
+    private static Task<HttpResponseMessage> Log(HttpClient c, Guid foodId, double qty, QuantityUnit? unit = null, Guid? servingId = null, Guid? meal = null, string date = Day) =>
+        c.PostAsJsonAsync("/api/diary/entries", new LogEntryRequest(date, meal ?? DefaultMeals.Lunch, foodId, null, unit, qty, servingId), Ct);
 
     [Fact]
     public async Task Logging_by_grams_scales_per_100g_values()
@@ -28,10 +28,10 @@ public sealed class DiaryTests(TallyApiFactory factory)
         Assert.Equal(DateOnly.Parse(Day), entry.Date);
 
         var day = await (await client.GetAsync($"/api/diary/{Day}", Ct)).ReadAsync<DayDto>();
-        var lunch = day.Meals.Single(m => m.Meal == Meal.Lunch);
+        var lunch = day.Meals.Single(m => m.Id == DefaultMeals.Lunch);
         Assert.Single(lunch.Entries);
         Assert.Equal(entry.Nutrients.EnergyKcal!.Value, day.Totals.Values.EnergyKcal!.Value, 6);
-        Assert.Empty(day.Meals.Single(m => m.Meal == Meal.Dinner).Entries);
+        Assert.Empty(day.Meals.Single(m => m.Id == DefaultMeals.Dinner).Entries);
     }
 
     [Fact]
@@ -89,9 +89,9 @@ public sealed class DiaryTests(TallyApiFactory factory)
         Assert.Equal(100, day.Meals.SelectMany(m => m.Entries).Single(e => e.Id == entry.Id).Nutrients.EnergyKcal!.Value, 6);
 
         // Changing the quantity re-uses the snapshot, too.
-        var edited = await (await client.PutAsJsonAsync($"/api/diary/entries/{entry.Id}", new UpdateEntryRequest(Meal.Dinner, null, null, 200), Ct)).ReadAsync<EntryDto>();
+        var edited = await (await client.PutAsJsonAsync($"/api/diary/entries/{entry.Id}", new UpdateEntryRequest(DefaultMeals.Dinner, null, null, 200), Ct)).ReadAsync<EntryDto>();
         Assert.Equal(200, edited.Nutrients.EnergyKcal!.Value, 6);
-        Assert.Equal(Meal.Dinner, edited.Meal);
+        Assert.Equal(DefaultMeals.Dinner, edited.MealId);
     }
 
     [Fact]
@@ -117,16 +117,16 @@ public sealed class DiaryTests(TallyApiFactory factory)
     {
         var (client, _) = await factory.CreateProfileClientAsync();
         var banana = await client.FirstFoodAsync("banana");
-        await Log(client, banana.Id, 120, meal: Meal.Breakfast, date: "2026-05-01");
-        await Log(client, banana.Id, 80, meal: Meal.Lunch, date: "2026-05-01");
+        await Log(client, banana.Id, 120, meal: DefaultMeals.Breakfast, date: "2026-05-01");
+        await Log(client, banana.Id, 80, meal: DefaultMeals.Lunch, date: "2026-05-01");
 
-        var result = await (await client.PostAsJsonAsync("/api/diary/copy", new CopyRequest("2026-05-01", "2026-05-02", Meal.Breakfast, Meal.Breakfast), Ct))
+        var result = await (await client.PostAsJsonAsync("/api/diary/copy", new CopyRequest("2026-05-01", "2026-05-02", DefaultMeals.Breakfast, DefaultMeals.Breakfast), Ct))
             .ReadAsync<Dictionary<string, int>>();
         Assert.Equal(1, result["copied"]);
 
         var day = await (await client.GetAsync("/api/diary/2026-05-02", Ct)).ReadAsync<DayDto>();
         var entry = Assert.Single(day.Meals.SelectMany(m => m.Entries));
-        Assert.Equal(Meal.Breakfast, entry.Meal);
+        Assert.Equal(DefaultMeals.Breakfast, entry.MealId);
         Assert.Equal(120, entry.Quantity);
     }
 

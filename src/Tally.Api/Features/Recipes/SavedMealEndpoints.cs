@@ -56,7 +56,7 @@ public static class SavedMealEndpoints
             if (NameError(req.Name) is { } nameError) return Invalid(nameError);
 
             var entries = await db.DiaryEntries.AsNoTracking()
-                .Where(e => e.ProfileId == profile.Id && e.Date == date && e.Meal == req.Meal)
+                .Where(e => e.ProfileId == profile.Id && e.Date == date && e.MealId == req.MealId)
                 .OrderBy(e => e.CreatedAt)
                 .ToListAsync(ct);
             var foodIds = entries.Where(e => e.FoodId != null).Select(e => e.FoodId!.Value).ToList();
@@ -88,11 +88,12 @@ public static class SavedMealEndpoints
         });
 
         // Logs every item with fresh snapshots of current values.
-        g.MapPost("/{id:guid}/log", async (Guid id, LogSavedMealRequest req, TallyDbContext db, RecipeService recipes, ProfileContext profile, CancellationToken ct) =>
+        g.MapPost("/{id:guid}/log", async (Guid id, LogSavedMealRequest req, Meals.MealPlans meals, TallyDbContext db, RecipeService recipes, ProfileContext profile, CancellationToken ct) =>
         {
             if (!Clock.TryParseDate(req.Date, out var date)) return Results.Problem("Dates must be in YYYY-MM-DD format.", statusCode: 400, title: "invalid_date");
             var meal = await Load(db, profile.Id).AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, ct);
             if (meal is null) return Results.NotFound();
+            if (!(await meals.HistoryAsync(profile.Id, ct)).Has(date, req.MealId)) return Meals.MealEndpoints.UnknownMeal();
 
             var recipeIds = meal.Items.Where(i => i.RecipeId != null).Select(i => i.RecipeId!.Value).ToList();
             var recipeMap = await recipes.Recipes(profile.Id).AsNoTracking().AsSplitQuery()
@@ -107,11 +108,11 @@ public static class SavedMealEndpoints
                 if (item.Food is { DeletedAt: null } food)
                 {
                     var q = Quantities.Resolve(food.Basis, item.Unit, item.Quantity, item.ServingName, item.ServingAmount, out _);
-                    if (q is not null) entry = DiaryService.Snapshot(food, profile.Id, date, req.Meal, q);
+                    if (q is not null) entry = DiaryService.Snapshot(food, profile.Id, date, req.MealId, q);
                 }
                 else if (item.RecipeId is { } rid && recipeMap.TryGetValue(rid, out var recipe))
                 {
-                    entry = RecipeService.Snapshot(recipe, profile.Id, date, req.Meal, item.Unit, item.Quantity, out _);
+                    entry = RecipeService.Snapshot(recipe, profile.Id, date, req.MealId, item.Unit, item.Quantity, out _);
                 }
 
                 if (entry is null) { skipped++; continue; }
