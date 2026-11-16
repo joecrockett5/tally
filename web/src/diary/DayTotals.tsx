@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Goals, NutrientTotals } from '../api/types';
 import { Unknown } from '../components/NutritionTable';
 import { formatNutrient, goalFor, NUTRIENTS, progressState } from '../lib/nutrients';
@@ -7,7 +8,33 @@ interface Props {
   goals: Goals | null;
 }
 
+/** The rows shown before the list is expanded: the macros, under the calorie number. */
+const SUMMARY_KEYS = ['protein', 'carbohydrate', 'fat'] as const;
+const SUMMARY = SUMMARY_KEYS.map((key) => NUTRIENTS.find((n) => n.key === key)!);
+const EXPANDED_KEY = 'tally.dayTotalsExpanded';
+
+function readExpanded(): boolean {
+  try {
+    return localStorage.getItem(EXPANDED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function DayTotals({ totals, goals }: Props) {
+  const [expanded, setExpanded] = useState(readExpanded);
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    try {
+      localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
+    } catch {
+      // Private browsing or blocked storage: the choice just won't be remembered.
+    }
+  };
+  const rows = expanded ? NUTRIENTS : SUMMARY;
+  const shownKeys: string[] = expanded ? [...NUTRIENTS.map((n) => n.key), 'energyKj'] : [...SUMMARY_KEYS, 'energyKcal', 'energyKj'];
+  const showIncompleteNote = totals.incomplete.some((k) => shownKeys.includes(k));
   const kcal = totals.values.energyKcal;
   const kcalGoal = goals?.energyKcal ?? null;
   const remaining = kcalGoal !== null && kcal !== null ? kcalGoal - kcal : null;
@@ -28,14 +55,14 @@ export function DayTotals({ totals, goals }: Props) {
           </div>
         )}
       </div>
-      <ul className="progress-list">
-        {NUTRIENTS.map((n) => {
+      <ul className="progress-list" id="day-totals-list">
+        {rows.map((n) => {
           const value = totals.values[n.key];
           const goal = goalFor(goals, n.key);
           const state = progressState(value, goal, n.isLimit);
           const pct = goal && value !== null ? Math.min(100, (value / goal) * 100) : 0;
           return (
-            <li key={n.key} className={n.indent ? 'indent' : undefined}>
+            <li key={n.key} className={expanded && n.indent ? 'indent' : undefined}>
               <div className="row-between small">
                 <span>
                   {n.label}
@@ -64,11 +91,14 @@ export function DayTotals({ totals, goals }: Props) {
           );
         })}
       </ul>
-      {totals.incomplete.length > 0 && (
+      {showIncompleteNote && (
         <p className="small muted">
           <Unknown /> Some foods don't list every nutrient, so those totals may be higher.
         </p>
       )}
+      <button type="button" className="totals-toggle" aria-expanded={expanded} aria-controls="day-totals-list" onClick={toggle}>
+        {expanded ? 'Show less' : 'Show all nutrients'}
+      </button>
     </section>
   );
 }
