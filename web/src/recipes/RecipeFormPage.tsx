@@ -89,76 +89,79 @@ export function RecipeFormPage() {
   if (!loaded) return error ? <ErrorNote error={error} /> : <p className="muted">Loading…</p>;
 
   return (
-    <form className="stack" onSubmit={submit}>
-      <div className="page-header">
-        <h1>{id ? 'Edit recipe' : 'New recipe'}</h1>
-        <button type="button" className="button button-ghost button-small" onClick={() => navigate(-1)}>
-          Cancel
-        </button>
-      </div>
-      <section className="card stack">
-        <label className="field">
-          <span>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={200} />
-        </label>
-        <div className="field-row">
-          <label className="field">
-            <span>Servings it makes</span>
-            <input inputMode="decimal" value={servings} onChange={(e) => setServings(e.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Cooked weight (g, optional)</span>
-            <input inputMode="decimal" value={cookedWeight} onChange={(e) => setCookedWeight(e.target.value)} placeholder="lets you log by grams" />
-          </label>
-        </div>
-      </section>
-
-      <section className="card stack">
-        <div className="row-between">
-          <h2>Ingredients</h2>
-          <button type="button" className="button button-small" onClick={() => setPicking(true)}>
-            + Add ingredient
+    <>
+      <form className="stack" onSubmit={submit}>
+        <div className="page-header">
+          <h1>{id ? 'Edit recipe' : 'New recipe'}</h1>
+          <button type="button" className="button button-ghost button-small" onClick={() => navigate(-1)}>
+            Cancel
           </button>
         </div>
-        {ingredients.length === 0 && <p className="hint">Add ingredients from any source — your foods, CoFID generics or Open Food Facts products.</p>}
-        <ul className="entry-list">
-          {ingredients.map((i) => (
-            <li key={i.key} className="entry-row">
-              <span className="grow">
-                <span className="entry-name">{i.food.name}</span>
-                <span className="entry-meta">
-                  {describeQuantity({
-                    unit: i.choice.unit,
-                    quantity: i.choice.quantity,
-                    servingName: i.food.servings.find((s) => s.id === i.choice.servingId)?.name,
-                    portionName: i.food.portionName,
-                    amount: amountFor(i.food, i.choice),
-                    basis: i.food.basis,
-                  })}
-                </span>
-              </span>
-              <span className="num entry-kcal">
-                {formatNutrient(nutrientsForAmount(i.food.nutrients, i.food.basis, amountFor(i.food, i.choice)).energyKcal, 'energyKcal')}
-              </span>
-              <button type="button" className="icon-button" aria-label={`Remove ${i.food.name}`} onClick={() => setIngredients(ingredients.filter((x) => x.key !== i.key))}>
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {ingredients.length > 0 && (
-        <section className="card">
-          <NutritionTable nutrients={perServing} caption={`Per serving (total ${formatNutrient(total.energyKcal, 'energyKcal')} kcal)`} />
+        <section className="card stack">
+          <label className="field">
+            <span>Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={200} />
+          </label>
+          <div className="field-row">
+            <label className="field">
+              <span>Servings it makes</span>
+              <input inputMode="decimal" value={servings} onChange={(e) => setServings(e.target.value)} required />
+            </label>
+            <label className="field">
+              <span>Cooked weight (g, optional)</span>
+              <input inputMode="decimal" value={cookedWeight} onChange={(e) => setCookedWeight(e.target.value)} placeholder="lets you log by grams" />
+            </label>
+          </div>
         </section>
-      )}
 
-      <ErrorNote error={error} />
-      <button className="button button-primary" disabled={busy || !name.trim() || ingredients.length === 0}>
-        {id ? 'Save recipe' : 'Create recipe'}
-      </button>
+        <section className="card stack">
+          <div className="row-between">
+            <h2>Ingredients</h2>
+            <button type="button" className="button button-small" onClick={() => setPicking(true)}>
+              + Add ingredient
+            </button>
+          </div>
+          {ingredients.length === 0 && <p className="hint">Add ingredients from any source — your foods, CoFID generics or Open Food Facts products.</p>}
+          <ul className="entry-list">
+            {ingredients.map((i) => (
+              <li key={i.key} className="entry-row">
+                <span className="grow">
+                  <span className="entry-name">{i.food.name}</span>
+                  <span className="entry-meta">
+                    {describeQuantity({
+                      unit: i.choice.unit,
+                      quantity: i.choice.quantity,
+                      servingName: i.food.servings.find((s) => s.id === i.choice.servingId)?.name,
+                      portionName: i.food.portionName,
+                      amount: amountFor(i.food, i.choice),
+                      basis: i.food.basis,
+                    })}
+                  </span>
+                </span>
+                <span className="num entry-kcal">
+                  {formatNutrient(nutrientsForAmount(i.food.nutrients, i.food.basis, amountFor(i.food, i.choice)).energyKcal, 'energyKcal')}
+                </span>
+                <button type="button" className="icon-button" aria-label={`Remove ${i.food.name}`} onClick={() => setIngredients(ingredients.filter((x) => x.key !== i.key))}>
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
 
+        {ingredients.length > 0 && (
+          <section className="card">
+            <NutritionTable nutrients={perServing} caption={`Per serving (total ${formatNutrient(total.energyKcal, 'energyKcal')} kcal)`} />
+          </section>
+        )}
+
+        <ErrorNote error={error} />
+        <button className="button button-primary" disabled={busy || !name.trim() || ingredients.length === 0}>
+          {id ? 'Save recipe' : 'Create recipe'}
+        </button>
+      </form>
+
+      {/* Outside the form: the picker has a search field and the scanner its own form. */}
       {picking && (
         <FoodPickerSheet
           title="Add ingredient"
@@ -169,6 +172,6 @@ export function RecipeFormPage() {
           }}
         />
       )}
-    </form>
+    </>
   );
 }

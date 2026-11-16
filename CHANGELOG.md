@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-16
+
+### Added
+
+- **Recipes:** when adding an ingredient you can now scan a barcode, or pick from your recent and frequent foods (starting from the amount you last used), as well as searching.
+
+### Fixed
+
+- **Recipes:** the add-ingredient sheet now opens at full height on phones, so the search box sits at the top of the screen instead of in a short strip at the bottom behind the keyboard.
+- **Recipes:** pressing Enter in the ingredient search no longer submits the recipe.
+
 ## [1.2.0] - 2026-11-16
 
 ### Changed
@@ -45,7 +56,8 @@ First public release, published as a multi-architecture container image
 - **Installable app:** a mobile-first PWA whose app shell opens instantly; diary data always comes from your server.
 - **Self-hosting:** Docker Compose setup with PostgreSQL 18, automatic database migrations on start, and a `/healthz` endpoint that reports the running version.
 
-[Unreleased]: https://github.com/joecrockett5/tally/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/joecrockett5/tally/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/joecrockett5/tally/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/joecrockett5/tally/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/joecrockett5/tally/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/joecrockett5/tally/releases/tag/v1.0.0
