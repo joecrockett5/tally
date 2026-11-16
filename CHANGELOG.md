@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-16
+
 ### Added
 
 - **Custom meals:** each profile can rename, reorder, add and remove its meals from **Customise meals** on the diary. Changes apply from the day they're made, so earlier days keep the meals and names they had. A removed meal that still has food logged on a day stays visible on that day.
@@ -37,5 +39,6 @@ First public release, published as a multi-architecture container image
 - **Installable app:** a mobile-first PWA whose app shell opens instantly; diary data always comes from your server.
 - **Self-hosting:** Docker Compose setup with PostgreSQL 18, automatic database migrations on start, and a `/healthz` endpoint that reports the running version.
 
-[Unreleased]: https://github.com/joecrockett5/tally/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/joecrockett5/tally/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/joecrockett5/tally/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/joecrockett5/tally/releases/tag/v1.0.0

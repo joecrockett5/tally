@@ -149,7 +149,7 @@ curl http://localhost:8080/healthz
 ```
 
 ```json
-{"ok":true,"version":"1.0.0"}
+{"ok":true,"version":"1.1.0"}
 ```
 
 Plain HTTP is also there on port 8080, but phones only allow the camera over HTTPS, so give the household the `https://` address.
@@ -179,6 +179,8 @@ docker run -d --name tally-app --network tally --restart unless-stopped \
 ```
 
 Tally retries its database connection on start, so it's fine that Postgres takes a moment to come up.
+
+To serve HTTPS on another port, say 9443, replace `-p 8443:8443` with `-p 9443:9443 -e ASPNETCORE_HTTPS_PORTS=9443`. Keep the port the same inside and outside the container: the scanner's link to the HTTPS address uses the inside one.
 
 </details>
 
@@ -338,7 +340,11 @@ If you have a certificate for a name that points at your server (from Let's Encr
       Tally__Https__KeyPath: /certs/privkey.pem
 ```
 
-Both files are PEM, and the key must be unencrypted and readable by the container's user (uid 1654). Tally reads them on start, so restart it after a renewal: `docker compose restart app`. To serve it on the standard port, set `HTTPS_PORT=443`.
+Both files are PEM, and the key must be unencrypted and readable by the container's user (uid 1654). Tally reads them on start, so restart it after a renewal: `docker compose restart app`.
+
+### A different HTTPS port
+
+Set `HTTPS_PORT` in `.env`, for example `HTTPS_PORT=9443`, and run `docker compose up -d`. Tally is then at `https://<server>:9443`. Use `HTTPS_PORT=443` to drop the port from the address altogether. This works with either certificate, and the plain HTTP port moves the same way with `APP_PORT`.
 
 ### Behind a reverse proxy
 
